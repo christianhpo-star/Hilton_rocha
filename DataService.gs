@@ -61,6 +61,22 @@ function getAppData() {
     });
   }
 
+  // Todos podem ver ocorrências aprovadas, mas somente EEB/Gestão recebe
+  // dados de identificação do registrador no navegador.
+  var historyListForClient = currentProfile.isEEB
+    ? historyList
+    : historyList.map(function(item) {
+        return {
+          id: item.id,
+          timestamp: item.timestamp,
+          roomCode: item.roomCode,
+          studentName: item.studentName,
+          rule: item.rule,
+          points: item.points,
+          obs: item.obs
+        };
+      });
+
   var shBonif = ss.getSheetByName('Historico_Bonificacoes');
   var bonifData = lerDadosWeb_(shBonif);
   var bonificacoesList = [];
@@ -107,9 +123,11 @@ function getAppData() {
   }
 
   var reviewQueueList = currentProfile.isEEB ? allReports : [];
-  var myReportsList = allReports.filter(function(item) {
-    return item.reporterEmail === userEmail;
-  }).slice(0, 20);
+  var myReportsList = currentProfile.canEdit
+    ? allReports.filter(function(item) {
+        return item.reporterEmail === userEmail;
+      }).slice(0, 20)
+    : [];
 
   var pendingReviewCount = 0;
   if (currentProfile.isEEB) {
@@ -138,7 +156,7 @@ function getAppData() {
     userRoleDesc: currentProfile.role,
     userOwnRoom: currentProfile.ownRoom,
     studentsByRoom: studentsByRoom,
-    historyList: historyList,
+    historyList: historyListForClient,
     reviewQueueList: reviewQueueList,
     myReportsList: myReportsList,
     pendingReviewCount: pendingReviewCount,
