@@ -1,0 +1,7 @@
+const _feedbackBaseToast=showToast;
+showToast=function(title,message,type='success'){
+  if(navigator.vibrate){try{navigator.vibrate(type==='error'?[35,35,35]:type==='warning'?[25,35,25]:25)}catch(e){}}
+  _feedbackBaseToast(title,message,type);
+  const active=document.querySelector('.tab-content.active .glass-card, .tab-content.active .home-hero');
+  if(active){active.classList.remove('pulse-once');void active.offsetWidth;active.classList.add('pulse-once')}
+};
