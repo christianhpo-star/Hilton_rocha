@@ -1,8 +1,5 @@
 function visibleApprovedHistory(){
-  const all=appData.historyList||[];
-  if(appData.isEEB)return all;
-  const email=String(appData.userEmail||'').toLowerCase().trim();
-  return all.filter(i=>String(i.userEmail||'').toLowerCase().trim()===email);
+  return appData.historyList||[];
 }
 
 function displayRuleLabel(rule){
@@ -11,12 +8,14 @@ function displayRuleLabel(rule){
 
 function renderHistory(){
   const tb=qs('histBody');if(!tb)return;tb.innerHTML='';
+  if(qs('histReporterHeader'))qs('histReporterHeader').textContent=appData.isEEB?'Registrado por':'Situação';
   visibleApprovedHistory().forEach(i=>{
     const tr=document.createElement('tr');
+    const reporterCell=appData.isEEB?esc(i.userEmail||'-'):'Aprovada pela EEB/Gestão';
     const actions=appData.isEEB?`<td><button class="btn-delete-action" onclick='handleAnularPunicao(${JSON.stringify(String(i.id))},${JSON.stringify(String(i.studentName))},${JSON.stringify(String(i.rule))})'><i class="fa-solid fa-rotate-left"></i> Anular aprovação</button></td>`:'';
-    tr.innerHTML=`<td>${esc(i.timestamp)}</td><td><strong>${esc(i.roomCode)}</strong></td><td>${esc(i.studentName)}</td><td>${esc(displayRuleLabel(i.rule))}</td><td>${esc(i.userEmail||'')}</td>${actions}`;tb.appendChild(tr);
+    tr.innerHTML=`<td>${esc(i.timestamp)}</td><td><strong>${esc(i.roomCode)}</strong></td><td>${esc(i.studentName)}</td><td>${esc(displayRuleLabel(i.rule))}</td><td>${reporterCell}</td>${actions}`;tb.appendChild(tr);
   });
-  if(!tb.children.length)tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:22px;color:var(--text-sub);">${appData.isEEB?'Nenhuma ocorrência aprovada até o momento.':'Você ainda não possui denúncias aprovadas.'}</td></tr>`;
+  if(!tb.children.length)tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:22px;color:var(--text-sub);">Nenhuma denúncia aprovada até o momento.</td></tr>';
 }
 
 function handleAnularPunicao(id,student,rule){
