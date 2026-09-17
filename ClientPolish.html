@@ -6,7 +6,7 @@ function installAccessPolishStyles(){
   style.textContent=`
     .school-logo-mark{background:#fff!important;padding:2px!important;overflow:hidden!important;border:1px solid rgba(22,101,52,.38)!important;box-shadow:0 8px 24px rgba(2,8,23,.28)!important}
     .school-logo-mark img{width:100%;height:100%;object-fit:contain;display:block;border-radius:10px}
-    @media(max-width:720px){.mobile-bottom-nav{grid-template-columns:repeat(6,1fr)!important}.mobile-nav-item{min-width:0}}
+    @media(max-width:720px){.mobile-nav-item{min-width:0}}
   `;
   document.head.appendChild(style);
 }
@@ -16,6 +16,7 @@ function applyAccessVisibility(){
   const canSend=canCurrentUserSendReports();
   const desktopSend=qs('btnTabRegistrar');if(desktopSend)desktopSend.style.display=canSend?'inline-flex':'none';
   const mobileSend=qs('mobileNavRegistrar');if(mobileSend)mobileSend.style.display=canSend?'flex':'none';
+  const mobileNav=document.querySelector('.mobile-bottom-nav');if(mobileNav)mobileNav.style.setProperty('grid-template-columns',`repeat(${canSend?6:5},1fr)`,'important');
   const registrar=qs('tab-registrar');if(registrar)registrar.setAttribute('aria-hidden',canSend?'false':'true');
   const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'':'none';
 }
