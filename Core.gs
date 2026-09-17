@@ -12,6 +12,89 @@ var REPORT_STATUS_APPROVED = 'APROVADA';
 var REPORT_STATUS_DENIED = 'NEGADA';
 var REPORT_STATUS_FALSE = 'FALSA';
 
+// Política de reconhecimento positivo: estímulo sem apagar recorrência de ocorrências.
+// Cada ocorrência aprovada desconta 1 ponto. Bônus comuns valem +1, ações de maior
+// impacto +2 e apenas conquistas excepcionais chegam a +3. O teto é +6 por turma/mês.
+var BONUS_MONTHLY_CAP = 6;
+var BONUS_CATEGORIES = {
+  COLABORACAO_SOLIDARIEDADE: {
+    label: 'Colaboração e solidariedade',
+    points: 1,
+    icon: 'fa-handshake-angle',
+    scope: 'BOTH',
+    description: 'Ajuda concreta a colegas, campanhas, acolhimento ou ação solidária.'
+  },
+  CUIDADO_ESPACO: {
+    label: 'Cuidado com o espaço escolar',
+    points: 1,
+    icon: 'fa-seedling',
+    scope: 'BOTH',
+    description: 'Ação de organização, conservação, sustentabilidade ou melhoria do ambiente.'
+  },
+  PROTAGONISMO: {
+    label: 'Protagonismo estudantil',
+    points: 1,
+    icon: 'fa-lightbulb',
+    scope: 'BOTH',
+    description: 'Iniciativa positiva, liderança responsável ou contribuição relevante para a turma.'
+  },
+  PARTICIPACAO_PROJETO: {
+    label: 'Participação em projeto ou ação da escola',
+    points: 1,
+    icon: 'fa-diagram-project',
+    scope: 'BOTH',
+    description: 'Participação efetiva em feira, oficina, projeto interdisciplinar ou ação institucional.'
+  },
+  REPRESENTACAO_ESCOLA: {
+    label: 'Representação da escola',
+    points: 2,
+    icon: 'fa-flag',
+    scope: 'BOTH',
+    description: 'Representação da escola em evento, olimpíada, esporte, cultura ou atividade externa.'
+  },
+  EVOLUCAO_COLETIVA: {
+    label: 'Evolução coletiva da turma',
+    points: 2,
+    icon: 'fa-arrow-trend-up',
+    scope: 'COLLECTIVE',
+    description: 'Melhoria coletiva comprovável em frequência, participação, organização ou indicador pedagógico.'
+  },
+  META_COLETIVA: {
+    label: 'Meta coletiva alcançada',
+    points: 2,
+    icon: 'fa-bullseye',
+    scope: 'COLLECTIVE',
+    description: 'Meta previamente combinada e alcançada pela turma em determinado período.'
+  },
+  CONQUISTA_EXCEPCIONAL: {
+    label: 'Conquista excepcional',
+    points: 3,
+    icon: 'fa-trophy',
+    scope: 'BOTH',
+    description: 'Conquista de destaque que ultrapassa a rotina e merece reconhecimento especial.'
+  }
+};
+
+function getBonusPolicy_() {
+  var categories = [];
+  Object.keys(BONUS_CATEGORIES).forEach(function(key) {
+    var item = BONUS_CATEGORIES[key];
+    categories.push({
+      key: key,
+      label: item.label,
+      points: item.points,
+      icon: item.icon,
+      scope: item.scope,
+      description: item.description
+    });
+  });
+  return {
+    monthlyCap: BONUS_MONTHLY_CAP,
+    categories: categories,
+    rationale: 'Os bônus estimulam boas ações, mas não podem neutralizar uma sequência grande de ocorrências.'
+  };
+}
+
 function doGet(e) {
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
@@ -108,6 +191,17 @@ function dataKey_(valor) {
   var texto = String(valor || '').trim();
   var match = texto.match(/^(\d{2}\/\d{2}\/\d{4})/);
   return match ? match[1] : texto.substring(0, 10);
+}
+
+function monthKey_(valor) {
+  if (valor instanceof Date) {
+    return Utilities.formatDate(valor, APP_TIMEZONE, 'yyyy-MM');
+  }
+  var texto = String(valor || '').trim();
+  var matchBr = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (matchBr) return matchBr[3] + '-' + matchBr[2];
+  var matchIso = texto.match(/^(\d{4})-(\d{2})/);
+  return matchIso ? matchIso[1] + '-' + matchIso[2] : texto.substring(0, 7);
 }
 
 function normalizarComparacao_(valor) {
