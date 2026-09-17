@@ -1,3 +1,23 @@
+function aplicarTetoBonificacoes_(list) {
+  var usedByRoomMonth = {};
+  // A lista é montada do mais recente para o mais antigo. Percorremos ao contrário
+  // para preservar a ordem cronológica ao aplicar o teto em registros legados.
+  for (var i = list.length - 1; i >= 0; i--) {
+    var item = list[i];
+    var key = String(item.roomCode || '').trim() + '|' + monthKey_(item.timestamp);
+    var recorded = Math.max(0, Number(item.points) || 0);
+    var used = usedByRoomMonth[key] || 0;
+    var remaining = Math.max(0, BONUS_MONTHLY_CAP - used);
+    var effective = Math.min(recorded, remaining);
+    item.recordedPoints = recorded;
+    item.points = effective;
+    item.capped = effective < recorded;
+    item.recognitionOnly = effective === 0;
+    usedByRoomMonth[key] = Math.min(BONUS_MONTHLY_CAP, used + effective);
+  }
+  return list;
+}
+
 function getAppData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('Abra este projeto por Extensões > Apps Script na planilha de referência.');
@@ -95,6 +115,8 @@ function getAppData() {
       obs: bonifData[b][8]
     });
   }
+  aplicarTetoBonificacoes_(bonificacoesList);
+
   var bonificacoesForClient = currentProfile.isEEB
     ? bonificacoesList
     : bonificacoesList.map(function(item) {
@@ -105,6 +127,8 @@ function getAppData() {
           studentOrRoom: item.studentOrRoom,
           category: item.category,
           points: item.points,
+          capped: item.capped,
+          recognitionOnly: item.recognitionOnly,
           obs: item.obs
         };
       });
@@ -175,6 +199,7 @@ function getAppData() {
     myReportsList: myReportsList,
     pendingReviewCount: pendingReviewCount,
     bonificacoesList: bonificacoesForClient,
+    bonusPolicy: getBonusPolicy_(),
     falseReportsList: falseReportsForClient,
     falseReportPenaltyPoints: FALSE_REPORT_PENALTY_POINTS,
     reportStatuses: {
