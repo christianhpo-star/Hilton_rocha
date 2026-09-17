@@ -1,0 +1,7 @@
+const _polishBaseSyncExperienceNav=syncExperienceNav;
+syncExperienceNav=function(tabId){
+  _polishBaseSyncExperienceNav(tabId);
+  const fab=qs('mobileEEBReview');
+  if(fab)fab.style.display=appData.isEEB?'':'none';
+  if(fab)fab.classList.toggle('active',tabId==='tab-eeb-manager');
+};
