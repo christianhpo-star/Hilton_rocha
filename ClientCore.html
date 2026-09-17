@@ -1,31 +1,129 @@
-const fallbackRooms={"1º SIST_ENERGIA":"1º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1","1º FAB_MECÂNICA":"1º FABRICAÇÃO MECÂNICA EM INT 1","2º SIST_ENERGIA":"2º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1","2º FAB_MECÂNICA":"2º FABRICAÇÃO MECÂNICA EM INT 1","3º INFORMÁTICA":"3º INFORMÁTICA EM INT 1","3º SEG_TRABALHO":"3º SEGURANÇA DO TRABALHO EM INT 1"};
-let activeRankingMonth='09';let occurrenceSaveInFlight=false;let appData={userEmail:'',isEEB:false,userCanEdit:false,userRoleDesc:'VISUALIZADOR',userOwnRoom:'',studentsByRoom:{},historyList:[],bonificacoesList:[],falseReportsList:[],authorizedUsers:[],roomMapping:fallbackRooms};
+const fallbackRooms={
+  '1º SIST_ENERGIA':'1º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1',
+  '1º FAB_MECÂNICA':'1º FABRICAÇÃO MECÂNICA EM INT 1',
+  '2º SIST_ENERGIA':'2º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1',
+  '2º FAB_MECÂNICA':'2º FABRICAÇÃO MECÂNICA EM INT 1',
+  '3º INFORMÁTICA':'3º INFORMÁTICA EM INT 1',
+  '3º SEG_TRABALHO':'3º SEGURANÇA DO TRABALHO EM INT 1'
+};
+
+let activeRankingMonth='09';
+let occurrenceSaveInFlight=false;
+let activeReviewFilter='PENDENTE';
+let appData={
+  userEmail:'',isEEB:false,userCanEdit:false,userRoleDesc:'VISUALIZADOR',userOwnRoom:'',
+  studentsByRoom:{},historyList:[],reviewQueueList:[],myReportsList:[],pendingReviewCount:0,
+  bonificacoesList:[],falseReportsList:[],authorizedUsers:[],roomMapping:fallbackRooms
+};
+
 function qs(id){return document.getElementById(id)}
+function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function buildRequestId(){return window.crypto&&crypto.randomUUID?crypto.randomUUID():'req-'+Date.now()+'-'+Math.random().toString(36).slice(2)}
 function todayBrazilKey(){return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date())}
-function fastRender(){initSelects();renderRanking();renderHistory();renderPermissions();renderFalseReports();renderAlunosRemover();renderBonificacoesMural();if(qs('userAuthEmail'))qs('userAuthEmail').textContent=`${appData.userEmail||'Conectando...'} (${appData.userRoleDesc||'VISUALIZADOR'})`;if(qs('btnTabEEBManager'))qs('btnTabEEBManager').style.display=appData.isEEB?'inline-flex':'none';if(qs('thAcoesEEB'))qs('thAcoesEEB').style.display=appData.isEEB?'table-cell':'none';if(qs('repImpartialityBanner')){const show=!appData.isEEB&&appData.userOwnRoom&&appData.userOwnRoom!=='TODAS';qs('repImpartialityBanner').style.display=show?'flex':'none';if(show&&qs('repImpartialityText'))qs('repImpartialityText').innerHTML=`Você representa <strong>${appData.userOwnRoom}</strong> e não pode lançar ocorrências nessa própria turma.`}if(qs('lblAvaliandoInfo'))qs('lblAvaliandoInfo').textContent=appData.isEEB?'(Todas as turmas liberadas)':appData.userOwnRoom?`(Sua turma ${appData.userOwnRoom} está bloqueada para autoavaliação)`:''}
-function fetchLiveBackendData(){if(qs('syncBar'))qs('syncBar').style.display='block';google.script.run.withSuccessHandler(d=>{if(qs('syncBar'))qs('syncBar').style.display='none';d.bonificacoesList=Array.isArray(d.bonificacoesList)?d.bonificacoesList:[];d.falseReportsList=Array.isArray(d.falseReportsList)?d.falseReportsList:[];appData=d;fastRender()}).withFailureHandler(e=>{if(qs('syncBar'))qs('syncBar').style.display='none';alert('Erro ao sincronizar: '+(e.message||e))}).getAppData()}
+function statusClass(status){const s=String(status||'').toUpperCase();return s==='APROVADA'?'status-approved':s==='NEGADA'?'status-denied':s==='FALSA'?'status-false':'status-pending'}
+function statusIcon(status){const s=String(status||'').toUpperCase();return s==='APROVADA'?'fa-circle-check':s==='NEGADA'?'fa-circle-minus':s==='FALSA'?'fa-triangle-exclamation':'fa-clock'}
+
+function showToast(title,message,type='success'){
+  let stack=qs('toastStack');
+  if(!stack){stack=document.createElement('div');stack.id='toastStack';stack.className='toast-stack';document.body.appendChild(stack)}
+  const toast=document.createElement('div');toast.className=`app-toast ${type}`;
+  const icon=type==='error'?'fa-circle-xmark':type==='warning'?'fa-triangle-exclamation':'fa-circle-check';
+  toast.innerHTML=`<i class="fa-solid ${icon}"></i><div><strong>${esc(title)}</strong><p>${esc(message)}</p></div>`;
+  stack.appendChild(toast);setTimeout(()=>toast.remove(),5200)
+}
+
+function fastRender(){
+  initSelects();
+  renderRanking();
+  renderHistory();
+  renderPermissions();
+  renderFalseReports();
+  renderAlunosRemover();
+  renderBonificacoesMural();
+  renderReviewQueue();
+  renderMyReports();
+
+  if(qs('userAuthEmail'))qs('userAuthEmail').textContent=`${appData.userEmail||'Conectando...'} (${appData.userRoleDesc||'VISUALIZADOR'})`;
+  if(qs('btnTabEEBManager'))qs('btnTabEEBManager').style.display=appData.isEEB?'inline-flex':'none';
+  if(qs('thAcoesEEB'))qs('thAcoesEEB').style.display=appData.isEEB?'table-cell':'none';
+  if(qs('boxFormBonificacao'))qs('boxFormBonificacao').style.display=appData.isEEB?'block':'none';
+
+  const pending=Number(appData.pendingReviewCount)||0;
+  if(qs('pendingReviewCount'))qs('pendingReviewCount').textContent=pending;
+  if(qs('navPendingBadge')){qs('navPendingBadge').textContent=pending;qs('navPendingBadge').style.display=appData.isEEB&&pending>0?'inline-flex':'none'}
+
+  if(qs('repImpartialityBanner')){
+    const show=!appData.isEEB&&appData.userOwnRoom&&appData.userOwnRoom!=='TODAS';
+    qs('repImpartialityBanner').style.display=show?'flex':'none';
+    if(show&&qs('repImpartialityText'))qs('repImpartialityText').innerHTML=`Você representa <strong>${esc(appData.userOwnRoom)}</strong>. Para preservar a imparcialidade, sua própria turma fica bloqueada para denúncias.`
+  }
+  if(qs('lblAvaliandoInfo'))qs('lblAvaliandoInfo').textContent=appData.isEEB?'Todas as turmas disponíveis':appData.userOwnRoom?`Sua turma ${appData.userOwnRoom} está bloqueada`:'';
+}
+
+function fetchLiveBackendData(){
+  if(qs('syncBar'))qs('syncBar').style.display='block';
+  google.script.run
+    .withSuccessHandler(d=>{
+      if(qs('syncBar'))qs('syncBar').style.display='none';
+      d=d||{};
+      ['historyList','reviewQueueList','myReportsList','bonificacoesList','falseReportsList','authorizedUsers'].forEach(k=>d[k]=Array.isArray(d[k])?d[k]:[]);
+      d.studentsByRoom=d.studentsByRoom||{};d.roomMapping=d.roomMapping||fallbackRooms;
+      appData=d;fastRender();
+    })
+    .withFailureHandler(e=>{
+      if(qs('syncBar'))qs('syncBar').style.display='none';
+      showToast('Falha na sincronização',e.message||String(e),'error');
+    })
+    .getAppData();
+}
+
 function roomCodes(){return Object.keys(appData.roomMapping||fallbackRooms)}
-function fillSelect(id,placeholder){const el=qs(id);if(!el)return;const current=el.value;el.innerHTML=`<option value="">${placeholder}</option>`;roomCodes().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=`${c} (${(appData.roomMapping||{})[c]||c})`;el.appendChild(o)});if([...el.options].some(o=>o.value===current))el.value=current}
-function initSelects(){fillSelect('roomSelect','-- Selecione a Turma --');fillSelect('cadTurmaSelect','Turma');fillSelect('removerTurmaSelect','Selecione a turma');fillSelect('permOwnRoomSelect','Turma de origem');fillSelect('bonifTurma','Selecione a turma');populateStudents();populateBonifStudents()}
-function populateStudents(){const room=qs('roomSelect')?.value,el=qs('studentSelect');if(!el)return;el.innerHTML='<option value="">-- Selecione o(a) Estudante --</option>';const list=(appData.studentsByRoom||{})[room]||[];el.disabled=!room;list.forEach(s=>{const o=document.createElement('option');o.value=s.nome;o.textContent=`${s.num}. ${s.nome}`;el.appendChild(o)})}
-function switchTab(id){document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.btn-tab').forEach(e=>e.classList.remove('active'));qs(id)?.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
-function setRankingMonth(m){activeRankingMonth=m;document.querySelectorAll('.btn-month-filter').forEach(b=>b.classList.remove('active'));({09:'filterSet',10:'filterOut',11:'filterNov',ALL:'filterAll'})[m]&&qs(({09:'filterSet',10:'filterOut',11:'filterNov',ALL:'filterAll'})[m])?.classList.add('active');renderRanking()}
-function hasDailyOccurrence(room,student,rule){const today=todayBrazilKey();return(appData.historyList||[]).some(i=>String(i.timestamp||'').slice(0,10)===today&&String(i.roomCode).trim().toUpperCase()===String(room).trim().toUpperCase()&&String(i.studentName).trim().toUpperCase()===String(student).trim().toUpperCase()&&String(i.rule).trim().toUpperCase()===String(rule).trim().toUpperCase())}
-function handleFormSubmit(e){e.preventDefault();if(occurrenceSaveInFlight)return;if(!appData.userCanEdit&&!appData.isEEB)return alert('Seu usuário não possui permissão para registrar ocorrências.');const room=qs('roomSelect').value,student=qs('studentSelect').value,radio=document.querySelector('input[name="ruleOption"]:checked');if(!room||!student||!radio)return alert('Preencha turma, estudante e critério.');if(!appData.isEEB&&appData.userOwnRoom===room)return alert('Você não pode avaliar sua própria turma.');if(hasDailyOccurrence(room,student,radio.value))return alert(`${student} já recebeu hoje uma ocorrência em "${radio.value}".`);const btn=qs('btnSubmitOcc');occurrenceSaveInFlight=true;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';const payload={roomCode:room,studentName:student,rule:radio.value,obs:qs('obsInput').value||'Registro via WebApp',requestId:buildRequestId()};google.script.run.withSuccessHandler(res=>{occurrenceSaveInFlight=false;btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> REGISTRAR NO GOOGLE SHEETS';if(!res||res.success===false)return alert(res?.message||'Registro não concluído.');if(res.occurrence&&!appData.historyList.some(i=>String(i.id)===String(res.occurrence.id)))appData.historyList.unshift(res.occurrence);qs('studentSelect').value='';radio.checked=false;qs('obsInput').value='';renderRanking();renderHistory();if(res.duplicateRequest)alert('Este lançamento já havia sido recebido. Nenhuma duplicidade foi criada.')}).withFailureHandler(err=>{occurrenceSaveInFlight=false;btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> REGISTRAR NO GOOGLE SHEETS';alert('Erro: '+(err.message||err))}).salvarOcorrencia(payload)}
-function handleAnularPunicao(id,student,rule){if(!appData.isEEB)return;if(!confirm(`Anular a ocorrência de ${student} — ${rule}? Os pontos serão restaurados.`))return;google.script.run.withSuccessHandler(res=>{if(!res.success)return alert(res.message);appData.historyList=appData.historyList.filter(i=>String(i.id)!==String(id));renderRanking();renderHistory()}).withFailureHandler(e=>alert(e.message||e)).anularPunicao(id)}
-function handleMarcarDenunciaFalsa(id,student,rule){if(!appData.isEEB)return;const motivo=prompt(`Motivo para marcar como denúncia falsa:\n${student} — ${rule}`);if(motivo===null)return;if(!motivo.trim())return alert('Informe o motivo da revisão.');google.script.run.withSuccessHandler(res=>{if(!res.success)return alert(res.message);appData.historyList=appData.historyList.filter(i=>String(i.id)!==String(id));if(res.falseReport)appData.falseReportsList.unshift(res.falseReport);renderRanking();renderHistory();renderFalseReports();alert(res.message)}).withFailureHandler(e=>alert(e.message||e)).marcarDenunciaFalsa(id,motivo.trim())}
-function renderRanking(){const root=qs('rankingContainer');if(!root)return;const rooms={};roomCodes().forEach(c=>rooms[c]={uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0});const monthOk=t=>activeRankingMonth==='ALL'||String(t||'').split('/')[1]?.trim()===activeRankingMonth;(appData.historyList||[]).forEach(i=>{if(!rooms[i.roomCode]||!monthOk(i.timestamp))return;const r=String(i.rule).toLowerCase();if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);else if(r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1)});(appData.bonificacoesList||[]).forEach(b=>{if(rooms[b.roomCode]&&monthOk(b.timestamp))rooms[b.roomCode].bonus+=Number(b.points)||0});(appData.falseReportsList||[]).forEach(f=>{if(f.reporterRoom&&rooms[f.reporterRoom]&&monthOk(f.timestamp))rooms[f.reporterRoom].falsePenalty+=Number(f.penaltyPoints)||0});const total=s=>s.uniforme+s.sapato+s.entrada+s.sala+s.bonus-s.falsePenalty;root.innerHTML='';Object.entries(rooms).sort((a,b)=>total(b[1])-total(a[1])).forEach(([code,s],idx)=>{const card=document.createElement('div');card.className='glass-card';card.innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;"><div><strong>${idx+1}º — ${code}</strong><br><small style="color:var(--text-sub);">${(appData.roomMapping||{})[code]||code}</small></div><div style="font-size:2rem;font-weight:900;">${total(s)}</div></div><div class="main-progress-track"><div class="main-progress-fill" style="width:${Math.max(0,Math.min(100,total(s)))}%;background:linear-gradient(90deg,#10b981,#34d399);"></div></div><div style="font-size:.78rem;color:var(--text-sub);">Uniforme ${s.uniforme}/40 · Sapato ${s.sapato}/30 · Entrada ${s.entrada}/20 · Sala ${s.sala}/10${s.bonus?` · +${s.bonus} bônus`:''}${s.falsePenalty?` · -${s.falsePenalty} denúncia falsa`:''}</div>`;root.appendChild(card)})}
-function renderHistory(){const tb=qs('histBody');if(!tb)return;tb.innerHTML='';(appData.historyList||[]).forEach(i=>{const tr=document.createElement('tr');const actions=appData.isEEB?`<td style="white-space:nowrap;"><button class="btn-delete-action" onclick='handleAnularPunicao(${JSON.stringify(String(i.id))},${JSON.stringify(String(i.studentName))},${JSON.stringify(String(i.rule))})'>Anular</button><button class="btn-false-action" onclick='handleMarcarDenunciaFalsa(${JSON.stringify(String(i.id))},${JSON.stringify(String(i.studentName))},${JSON.stringify(String(i.rule))})'>Denúncia falsa</button></td>`:'';tr.innerHTML=`<td>${i.timestamp}</td><td>${i.roomCode}</td><td>${i.studentName}</td><td>${i.rule}</td><td>${i.userEmail||''}</td>${actions}`;tb.appendChild(tr)});if(!tb.children.length)tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;">Nenhuma ocorrência.</td></tr>'}
-function renderPermissions(){const tb=qs('permTbody');if(!tb)return;tb.innerHTML='';(appData.authorizedUsers||[]).forEach(u=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${u.email}</td><td>${u.role}</td><td>${u.ownRoom||'-'}</td><td>${u.ownRoom==='TODAS'?'Total':'Outras turmas'}</td><td>${u.canEdit?'SIM':'NÃO'}</td>`;tb.appendChild(tr)})}
-function renderFalseReports(){const tb=qs('falseReportsBody');if(!tb)return;tb.innerHTML='';(appData.falseReportsList||[]).forEach(i=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i.timestamp||''}</td><td>${i.accusedRoom||'-'}<br>${i.studentName||''}</td><td>${i.rule||'-'}</td><td>${i.reporterEmail||'-'}</td><td>${i.reporterRoom||'-'}</td><td>-${Number(i.penaltyPoints)||0}</td><td>${i.reason||'-'}<br><small>${i.reviewerEmail||''}</small></td>`;tb.appendChild(tr)});if(!tb.children.length)tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;">Nenhuma denúncia marcada como falsa.</td></tr>'}
-function handleCadastrarAluno(e){e.preventDefault();const turma=qs('cadTurmaSelect').value,nome=qs('cadNomeCompleto').value;if(!turma||!nome)return;google.script.run.withSuccessHandler(()=>{qs('cadNomeCompleto').value='';fetchLiveBackendData()}).withFailureHandler(x=>alert(x.message||x)).cadastrarNovoAluno(turma,nome)}
-function renderAlunosRemover(){const root=qs('listaAlunosRemoverContainer');if(!root)return;const room=qs('removerTurmaSelect')?.value,list=(appData.studentsByRoom||{})[room]||[];root.innerHTML=list.map(s=>`<div style="display:flex;justify-content:space-between;padding:7px;border-bottom:1px solid var(--card-border);"><span>${s.num}. ${s.nome}</span>${appData.isEEB?`<button class="btn-delete-action" onclick='handleRemoverAluno(${JSON.stringify(room)},${JSON.stringify(s.nome)})'>Retirar</button>`:''}</div>`).join('')}
-function handleRemoverAluno(turma,nome){if(confirm(`Retirar ${nome}?`))google.script.run.withSuccessHandler(fetchLiveBackendData).withFailureHandler(e=>alert(e.message||e)).removerAluno(turma,nome)}
-function handleSalvarPermissao(e){e.preventDefault();google.script.run.withSuccessHandler(fetchLiveBackendData).withFailureHandler(x=>alert(x.message||x)).salvarPermissao({email:qs('permEmailInput').value,ownRoom:qs('permOwnRoomSelect').value,canEdit:qs('permCanEditSelect').value==='true',role:`REPRESENTANTE (${qs('permOwnRoomSelect').value})`})}
-function populateBonifStudents(){const room=qs('bonifTurma')?.value,el=qs('bonifAlcance');if(!el)return;el.innerHTML='<option value="Toda a Turma (Reconhecimento Coletivo)">Toda a Turma</option>';((appData.studentsByRoom||{})[room]||[]).forEach(s=>{const o=document.createElement('option');o.value=`${s.num} - ${s.nome}`;o.textContent=s.nome;el.appendChild(o)})}
-function handleSalvarBonificacao(e){e.preventDefault();if(!appData.isEEB)return alert('Apenas EEB/Gestão.');const btn=qs('btnSubmitBonif');btn.disabled=true;google.script.run.withSuccessHandler(res=>{btn.disabled=false;if(res?.success)fetchLiveBackendData()}).withFailureHandler(x=>{btn.disabled=false;alert(x.message||x)}).salvarBonificacao({roomCode:qs('bonifTurma').value,studentOrRoom:qs('bonifAlcance').value,category:qs('bonifCategoria').value,points:Number(qs('bonifPontos').value)||10,obs:qs('bonifObs').value})}
-function renderBonificacoesMural(){const root=qs('muralBonificacoesContainer');if(!root)return;root.innerHTML=(appData.bonificacoesList||[]).map(b=>`<div class="mural-card"><strong>${b.roomCode}: +${b.points} pts</strong><br>${b.category}<br><small>${b.obs||''}</small>${appData.isEEB?`<br><button class="btn-delete-action" onclick='handleAnularBonificacao(${JSON.stringify(String(b.id))})'>Anular bônus</button>`:''}</div>`).join('')||'<div style="color:var(--text-sub);">Nenhum reconhecimento registrado.</div>'}
-function handleAnularBonificacao(id){if(confirm('Anular bonificação?'))google.script.run.withSuccessHandler(fetchLiveBackendData).withFailureHandler(e=>alert(e.message||e)).anularBonificacao(id)}
-function exportToExcel(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(appData.historyList||[]),'Historico_Ocorrencias');if((appData.falseReportsList||[]).length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(appData.falseReportsList),'Denuncias_Falsas');XLSX.writeFile(wb,'Ocorrencias_Hilton_Rocha.xlsx')}
+function fillSelect(id,placeholder){
+  const el=qs(id);if(!el)return;const current=el.value;
+  el.innerHTML=`<option value="">${esc(placeholder)}</option>`;
+  roomCodes().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=`${c} (${(appData.roomMapping||{})[c]||c})`;el.appendChild(o)});
+  if([...el.options].some(o=>o.value===current))el.value=current;
+}
+function initSelects(){
+  fillSelect('roomSelect','Selecione a turma');fillSelect('cadTurmaSelect','Turma');fillSelect('removerTurmaSelect','Selecione a turma');fillSelect('permOwnRoomSelect','Turma de origem');fillSelect('bonifTurma','Selecione a turma');populateStudents();populateBonifStudents();
+}
+function populateStudents(){
+  const room=qs('roomSelect')?.value,el=qs('studentSelect');if(!el)return;
+  el.innerHTML='<option value="">Selecione o(a) estudante</option>';const list=(appData.studentsByRoom||{})[room]||[];el.disabled=!room;
+  list.forEach(s=>{const o=document.createElement('option');o.value=s.nome;o.textContent=`${s.num}. ${s.nome}`;el.appendChild(o)});
+}
+
+function switchTab(id){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.btn-tab').forEach(e=>e.classList.remove('active'));
+  qs(id)?.classList.add('active');
+  const activeBtn=[...document.querySelectorAll('.btn-tab')].find(b=>(b.getAttribute('onclick')||'').includes(`'${id}'`));
+  if(activeBtn)activeBtn.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function setRankingMonth(m){
+  activeRankingMonth=m;document.querySelectorAll('.btn-month-filter').forEach(b=>b.classList.remove('active'));
+  const map={09:'filterSet',10:'filterOut',11:'filterNov',ALL:'filterAll'};if(map[m])qs(map[m])?.classList.add('active');renderRanking();
+}
+
+function renderPermissions(){
+  const tb=qs('permTbody');if(!tb)return;tb.innerHTML='';
+  (appData.authorizedUsers||[]).forEach(u=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${esc(u.ownRoom||'-')}</td><td>${u.ownRoom==='TODAS'?'Total':'Outras turmas'}</td><td>${u.canEdit?'SIM':'NÃO'}</td>`;tb.appendChild(tr)});
+}
+function renderAlunosRemover(){
+  const root=qs('listaAlunosRemoverContainer');if(!root)return;const room=qs('removerTurmaSelect')?.value,list=(appData.studentsByRoom||{})[room]||[];
+  root.innerHTML=list.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid rgba(148,163,184,.08);"><span>${esc(s.num)}. ${esc(s.nome)}</span>${appData.isEEB?`<button class="btn-delete-action" onclick='handleRemoverAluno(${JSON.stringify(room)},${JSON.stringify(s.nome)})'>Retirar</button>`:''}</div>`).join('')||'<div class="empty-state"><i class="fa-solid fa-users"></i>Selecione uma turma.</div>';
+}
+function handleCadastrarAluno(e){
+  e.preventDefault();const turma=qs('cadTurmaSelect').value,nome=qs('cadNomeCompleto').value;if(!turma||!nome)return;
+  google.script.run.withSuccessHandler(()=>{qs('cadNomeCompleto').value='';showToast('Estudante adicionado','Cadastro atualizado.');fetchLiveBackendData()}).withFailureHandler(x=>showToast('Erro',x.message||String(x),'error')).cadastrarNovoAluno(turma,nome);
+}
+function handleRemoverAluno(turma,nome){
+  if(confirm(`Retirar ${nome}?`))google.script.run.withSuccessHandler(()=>{showToast('Estudante retirado','Cadastro atualizado.','warning');fetchLiveBackendData()}).withFailureHandler(e=>showToast('Erro',e.message||String(e),'error')).removerAluno(turma,nome);
+}
+function handleSalvarPermissao(e){
+  e.preventDefault();const ownRoom=qs('permOwnRoomSelect').value;
+  google.script.run.withSuccessHandler(()=>{showToast('Representante salvo','Permissões atualizadas.');fetchLiveBackendData()}).withFailureHandler(x=>showToast('Erro',x.message||String(x),'error')).salvarPermissao({email:qs('permEmailInput').value,ownRoom:ownRoom,canEdit:qs('permCanEditSelect').value==='true',role:`REPRESENTANTE (${ownRoom})`});
+}
+
 window.onload=()=>{try{fastRender()}catch(e){console.error(e)}fetchLiveBackendData()};
