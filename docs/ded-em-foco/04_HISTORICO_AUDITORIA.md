@@ -4,51 +4,90 @@ Data: 17/09/2026.
 
 ## Passo 1 — separar modalidade e série
 
-Confirmado que a escola possui REG noturno e EMTI Profissional. A lógica de cálculo não pode compartilhar uma única matriz entre esses grupos.
+Confirmado na base: 9 turmas, sendo 3 REG/NOITE e 6 INT/INTEGRAL. O cálculo não compartilha uma única matriz entre esses grupos.
 
-## Passo 2 — revisar a regra de escolha da matriz
+## Passo 2 — revisar a escolha da matriz
 
-Critério final: usar a **matriz mais recente oficialmente aplicável à série/oferta em 2026**.
+A regra foi refinada para combinar **norma geral vigente + regra oficial de transição**.
 
-Orientação oficial PRA/SRE-C de 03/06/2026:
+- Resolução SEE nº 5.212/2025: norma geral das matrizes de 2026; art. 54 revoga formalmente a 5.084/2024 em 01/01/2026.
+- Formação oficial SEE/MG/SRE-C de 03/06/2026: regra operacional específica — turmas iniciadas em 2025 seguem 5.084/2024 do 2º ao 3º; turmas iniciadas em 2026 seguem 5.212/2025.
 
-- 1º ano EMTI → Documento/Matriz 2026;
-- 2º e 3º anos EMTI → Documento/Matriz 2025.
+As duas evidências são registradas. O painel segue a instrução específica de continuidade para as turmas em andamento, até eventual ato posterior da SEE/MG.
 
-## Passo 3 — investigar o saldo -110
+## Passo 3 — revisar o saldo técnico de ~110
 
-Foi reproduzido matematicamente o saldo. Ele resultava de hipótese não documentada de 6 A/S + 6 A/S nos componentes técnicos de Sistemas de Energia Renovável. A hipótese foi retirada.
+O cenário 6 A/S + 6 A/S reproduz -110, mas essa distribuição não possui fonte localizada. A hipótese foi retirada do cálculo oficial.
 
-## Passo 4 — bloquear estimativa técnica sem fonte
+A auditoria global encontrou, independentemente dessa hipótese:
 
-Fabricação Mecânica e Sistemas de Energia Renovável do 2º ano ficam sem previsão automática por componente até localização da matriz TFE/SENAI aplicável ou do horário homologado.
+- 2º SER T1: 481 x 594 = **-113**;
+- 2º Fabricação T1: 574 x 594 = -20.
+
+## Passo 4 — localizar a diferença
+
+Decomposição T1:
+
+- técnico SER III+IV = 62;
+- técnico Fabricação III+IV = 162;
+- diferença técnica comparativa = **-100**;
+- demais componentes SER = 419;
+- demais componentes Fabricação = 412;
+- diferença dos demais = +7.
+
+Conclusão: a anomalia está concentrada no bloco técnico do SER no T1, mas a quantidade normativa de III/IV continua pendente de fonte SENAI/horário.
 
 ## Passo 5 — revisar o calendário
 
-O calendário estadual enviado foi reconstruído dia a dia. Ele possui 200 dias no modelo geral, incluindo os sábados letivos de 27/06 e 12/09.
+O calendário estadual fornecido possui 200 dias-alvo, com 66/68/66 por trimestre e sábados letivos de 27/06 e 12/09.
 
-Na adaptação para Belo Horizonte, 08/12 é feriado municipal e precisa de recomposição homologada. O painel não escolhe automaticamente uma data de reposição.
+08/12 é feriado municipal em Belo Horizonte. O sistema não reduz a obrigação para 199; registra **199 datas localizadas + 1 dia pendente de recomposição homologada**.
 
-## Passo 6 — revisar a responsabilidade docente
+## Passo 6 — validar responsabilidade docente
 
-O consolidado mantém um único diário por turma + componente. Se o professor mudou entre 1º e 2º trimestre, o total é acumulado e o responsável exibido é o atual do 2º trimestre. Duplicidade simultânea no relatório atual permanece `A confirmar`.
+- turma + componente = um diário lógico;
+- troca entre T1/T2: responsável atual = docente do T2;
+- duplicidade idêntica: contagem única;
+- dois nomes simultâneos no T2: responsável fica `A confirmar`.
 
-## Passo 7 — proteção de dados no GitHub
+## Passo 7 — validar tecnicamente o HTML
 
-O repositório `christianhpo-star/Hilton_rocha` é público e contém outro WebApp escolar. Esta auditoria foi registrada em branch própria, em `docs/ded-em-foco/`, sem publicar o `index.html` preenchido nem nomes de docentes. O HTML com dados internos deve permanecer fora do repositório público enquanto houver informações identificáveis.
+A versão local foi testada em Chromium/Playwright:
 
-## Commits desta branch
+- 10 telas abertas;
+- carregamento inicial: 171 registros / 24 docentes / 9 turmas;
+- reimportação das planilhas T1 e T2 preservou a mesma base lógica;
+- recomposição em sessão de teste levou o 3º trimestre de 65/66 para 66/66;
+- erros JavaScript/console: **0**.
 
-- `2df83ef13e0c30fb931542bd37ec2aa36e892de0` — critério de matriz por série;
-- `d7b09409a6df78e69a546bd0858b298edd9aed8a` — calendário e recomposição local;
-- `3e67a98c774ebba7aa4548e3d50aac0b67f348e6` — investigação do saldo técnico de 110 aulas;
-- este commit — histórico consolidado da auditoria.
+O HTML preenchido não é publicado neste repositório porque o repositório é público e o arquivo contém dados internos/names de docentes.
 
-## Próximo gate
+## Branch e PR
 
-Localizar e validar a matriz específica do Trilhas de Futuro nas Escolas/SENAI para:
+- branch: `audit/ded-em-foco-curriculo-2026`;
+- PR: `#1 — Auditoria DED em Foco — matrizes e calendário 2026`;
+- estado: rascunho.
 
-- Fabricação Mecânica — 2º ano;
-- Sistemas de Energia Renovável — 2º ano.
+## Commits principais
 
-Somente após esse gate o painel poderá voltar a calcular automaticamente a previsão dos componentes técnicos dessas turmas.
+Início da auditoria:
+
+- `2df83ef` — critério inicial de matriz;
+- `d7b0940` — calendário local;
+- `3e67a98` — investigação inicial do saldo técnico;
+- `d7887bb` — histórico inicial.
+
+Refinamento atual:
+
+- `636d30e` — registra conflito normativo e regra de transição EMTI;
+- `2d110e7` — corrige 199 datas localizadas x meta legal de 200;
+- `75bff13` — localiza diferença de 100 aulas no bloco técnico do 2º SER.
+
+## Gates antes de concluir o PR
+
+- [ ] obter plano/horário SENAI/TFE do 2º ano;
+- [ ] confirmar data homologada da recomposição de 08/12;
+- [x] executar validação sintática;
+- [x] executar regressão em navegador;
+- [x] manter dados nominais fora do repositório público;
+- [ ] revisar novamente o PR depois das duas pendências documentais.
