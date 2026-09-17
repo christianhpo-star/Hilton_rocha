@@ -1,6 +1,10 @@
 <div id="tab-historico" class="tab-content">
   <div class="glass-card">
-    <div class="card-title"><div><i class="fa-solid fa-list-check"></i> Histórico em Tempo Real (Google Sheets)</div><button onclick="exportToExcel()" style="background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(16,185,129,.4);padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;">Baixar Excel (.xlsx)</button></div>
-    <div style="overflow-x:auto;"><table class="app-table"><thead><tr><th>Timestamp</th><th>Turma Avaliada</th><th>Estudante</th><th>Regra</th><th>Registrado Por</th><th id="thAcoesEEB" style="display:none;text-align:center;">Ações EEB</th></tr></thead><tbody id="histBody"></tbody></table></div>
+    <div class="card-title">
+      <div><i class="fa-solid fa-circle-check"></i> Ocorrências oficialmente aprovadas</div>
+      <button onclick="exportToExcel()" class="btn-export"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+    </div>
+    <div class="approved-history-note"><i class="fa-solid fa-shield-check"></i><span>Esta lista contém apenas denúncias que passaram pela análise da EEB/Gestão e, portanto, já fazem parte do cálculo do ranking.</span></div>
+    <div class="table-scroll"><table class="app-table"><thead><tr><th>Data/Hora do envio</th><th>Turma</th><th>Estudante</th><th>Critério aprovado</th><th>Registrado por</th><th id="thAcoesEEB" style="display:none;text-align:center;">Correção EEB</th></tr></thead><tbody id="histBody"></tbody></table></div>
   </div>
 </div>
