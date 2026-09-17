@@ -1,9 +1,22 @@
 <div id="tab-ranking" class="tab-content">
-  <div class="glass-card" style="margin-bottom:16px;padding:16px 22px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-      <div><h2 style="font-family:'Outfit';font-size:1.2rem;font-weight:800;color:white;">🏆 Classificação e Barras de Progresso — 100 Pontos Mensais</h2><p style="font-size:.75rem;color:var(--text-sub);">Acompanhamento visual em tempo real. Cada turma inicia o mês com 100 pontos.</p></div>
-      <div class="month-filter-group"><span style="font-size:.75rem;font-weight:700;color:var(--text-sub);">MÊS DA COMPETIÇÃO:</span><button class="btn-month-filter active" id="filterSet" onclick="setRankingMonth('09')">🚌 Setembro (Excursão)</button><button class="btn-month-filter" id="filterOut" onclick="setRankingMonth('10')">🍿 Outubro (Cinema)</button><button class="btn-month-filter" id="filterNov" onclick="setRankingMonth('11')">🎁 Novembro (Brindes)</button><button class="btn-month-filter" id="filterAll" onclick="setRankingMonth('ALL')">Todos os Meses</button></div>
+  <section class="ranking-hero">
+    <div>
+      <span class="eyebrow">PLACAR OFICIAL</span>
+      <h2><i class="fa-solid fa-trophy"></i> Ranking das turmas</h2>
+      <p>O placar considera somente ocorrências <strong>aprovadas pela EEB/Gestão</strong>, além das bonificações e penalidades por denúncia falsa.</p>
+    </div>
+    <div class="official-badge"><i class="fa-solid fa-shield-check"></i> Dados validados</div>
+  </section>
+
+  <div class="glass-card ranking-filter-card">
+    <div class="month-filter-group">
+      <span class="filter-label">Período</span>
+      <button class="btn-month-filter active" id="filterSet" onclick="setRankingMonth('09')">🚌 Setembro</button>
+      <button class="btn-month-filter" id="filterOut" onclick="setRankingMonth('10')">🍿 Outubro</button>
+      <button class="btn-month-filter" id="filterNov" onclick="setRankingMonth('11')">🎁 Novembro</button>
+      <button class="btn-month-filter" id="filterAll" onclick="setRankingMonth('ALL')">Consolidado</button>
     </div>
   </div>
-  <div id="rankingContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;"></div>
+
+  <div id="rankingContainer" class="ranking-grid"></div>
 </div>
