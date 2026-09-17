@@ -9,9 +9,14 @@ Código-fonte do WebApp em Google Apps Script usado no projeto escolar **Nossa T
 - `Occurrences.gs` — envio de denúncias, limite diário, idempotência e correções de ocorrências aprovadas.
 - `ReviewService.gs` — aprovação, negativa e classificação de denúncia falsa pela EEB/Gestão.
 - `Management.gs` — estudantes, representantes e bonificações.
-- `Index.html` / `Styles.html` — estrutura e design da interface.
-- `Nav.html` e `*View.html` — componentes visuais por módulo.
+- `Index.html` / `Styles.html` — estrutura e design-base da interface.
+- `StylesExperience.html` — camada visual da experiência moderna, mobile e home.
+- `HomeView.html` — início personalizado com resumo da turma e feed.
+- `MobileNav.html` — navegação inferior para celular.
+- `DecisionModal.html` — modal de decisão pedagógica da EEB/Gestão.
+- `Nav.html` e demais `*View.html` — componentes visuais por módulo.
 - `ClientCore.html`, `ClientOccurrences.html`, `ClientReview.html`, `ClientRanking.html`, `ClientHistory.html` e `ClientBonus.html` — lógica do navegador modularizada por responsabilidade.
+- `ClientExperience.html`, `ClientModal.html`, `ClientFeedback.html` e `ClientPolish.html` — dashboard, identidade das turmas, modal, microfeedback e refinamentos responsivos.
 
 ## Fluxo das denúncias
 
@@ -45,15 +50,27 @@ Os dados de estudantes e usuários autorizados **não são versionados neste rep
 
 ## Interface desta revisão
 
-A interface do estudante foi reformulada para reforçar o caráter pedagógico do processo:
+A experiência foi redesenhada para que a plataforma seja percebida como um aplicativo de acompanhamento da competição, e não somente como uma ferramenta de denúncia.
 
-- linguagem de **envio para análise**, em vez de punição imediata;
+### Estudantes e representantes
+
+- nova tela **Início**, com posição, pontuação, distância para a próxima colocação e denúncias pendentes;
+- identidade visual própria para cada turma, com símbolo e cor usados na home e no ranking;
+- feed de acontecimentos recentes sem exposição de nomes de estudantes;
+- navegação inferior fixa no celular com `Início`, `Enviar`, `Ranking`, `Destaques` e `Regras`;
 - fluxo visual `Você envia → EEB analisa → Ranking atualiza`;
 - acompanhamento das próprias denúncias com status visual;
-- cards de critérios maiores e mais adequados ao uso no celular;
-- feedback por notificações discretas em vez de depender apenas de `alert()`;
-- navegação e ranking com visual mais moderno e responsivo;
-- painel EEB com fila e contador de pendências.
+- cards de critérios maiores e adequados ao uso no celular;
+- feedback visual e vibração curta em dispositivos compatíveis após ações importantes;
+- skeletons de carregamento para evitar telas vazias durante a sincronização.
+
+### EEB e Gestão
+
+- home adaptada para mostrar a fila pedagógica geral;
+- atalho flutuante da fila de revisão no celular, com contador de pendências;
+- decisões de **aprovar, negar ou classificar como falsa** em modal contextual;
+- antes da confirmação, o modal explica o impacto da decisão sobre o ranking e a penalidade;
+- histórico e auditoria continuam separados das denúncias pendentes.
 
 ## Publicação
 
