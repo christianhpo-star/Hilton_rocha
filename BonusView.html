@@ -1,0 +1,16 @@
+<div id="tab-bonificacoes" class="tab-content">
+  <div class="glass-card" id="boxFormBonificacao">
+    <div class="card-title"><div><i class="fa-solid fa-award"></i> Reconhecimento Pedagógico & Bônus</div><span style="font-size:.75rem;color:var(--text-sub);">Exclusivo EEB/Gestão para lançamento</span></div>
+    <form onsubmit="handleSalvarBonificacao(event)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <select id="bonifTurma" class="custom-select" onchange="populateBonifStudents()"><option value="">Selecione a turma</option></select>
+        <select id="bonifAlcance" class="custom-select"><option>Toda a Turma (Reconhecimento Coletivo)</option></select>
+        <input id="bonifCategoria" class="custom-input" placeholder="Categoria do reconhecimento" required>
+        <input id="bonifPontos" class="custom-input" type="number" min="1" value="10" required>
+      </div>
+      <input id="bonifObs" class="custom-input" style="margin-top:12px;" placeholder="Justificativa pedagógica">
+      <button id="btnSubmitBonif" class="btn-submit-occ" type="submit" style="background:linear-gradient(135deg,#f59e0b,#d97706);">CONCEDER BÔNUS</button>
+    </form>
+  </div>
+  <div class="glass-card"><div class="card-title"><div><i class="fa-solid fa-star"></i> Mural de Reconhecimentos</div></div><div id="muralBonificacoesContainer" style="display:grid;gap:12px;"></div></div>
+</div>
