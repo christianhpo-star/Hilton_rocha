@@ -1,0 +1,80 @@
+name: Sincronizar Apps Script
+
+on:
+  workflow_dispatch:
+    inputs:
+      operacao:
+        description: "Validar apenas ou sincronizar o codigo com o Apps Script"
+        required: true
+        type: choice
+        default: validar
+        options:
+          - validar
+          - sincronizar
+      confirmacao:
+        description: "Para sincronizar, digite exatamente SINCRONIZAR"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hilton-rocha-apps-script-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: ${{ inputs.operacao == 'sincronizar' && 'Sincronizar codigo' || 'Validar integracao' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Conferir credencial protegida
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        shell: bash
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "Secret CLASPRC_JSON nao configurado no repositorio."
+            exit 1
+          fi
+
+      - name: Validar confirmacao de envio
+        if: ${{ inputs.operacao == 'sincronizar' }}
+        shell: bash
+        run: |
+          if [ "${{ inputs.confirmacao }}" != "SINCRONIZAR" ]; then
+            echo "Confirmacao incorreta. Nada foi enviado."
+            exit 1
+          fi
+
+      - name: Executar integracao com Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          CONFIRM_SYNC: ${{ inputs.confirmacao }}
+        shell: bash
+        run: |
+          chmod +x scripts/sync-appsscript.sh
+          if [ "${{ inputs.operacao }}" = "sincronizar" ]; then
+            scripts/sync-appsscript.sh sync
+          else
+            scripts/sync-appsscript.sh validate
+          fi
+
+      - name: Resumo
+        if: always()
+        shell: bash
+        run: |
+          echo "### Apps Script" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projeto: EE Professor Hilton Rocha" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Operacao solicitada: ${{ inputs.operacao }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Este workflow nunca cria versao nem deployment automaticamente." >> "$GITHUB_STEP_SUMMARY"
