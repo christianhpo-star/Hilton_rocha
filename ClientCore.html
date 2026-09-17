@@ -10,11 +10,10 @@ const fallbackRooms={
 let activeRankingMonth='09';
 let occurrenceSaveInFlight=false;
 let activeReviewFilter='PENDENTE';
-let profileWarningShown=false;
 let appData={
   userEmail:'',profileFound:null,isEEB:false,userCanEdit:false,userRoleDesc:'VISUALIZADOR',userOwnRoom:'',
   studentsByRoom:{},historyList:[],reviewQueueList:[],myReportsList:[],pendingReviewCount:0,
-  bonificacoesList:[],falseReportsList:[],authorizedUsers:[],roomMapping:fallbackRooms
+  bonificacoesList:[],bonusPolicy:{monthlyCap:6,categories:[]},falseReportsList:[],authorizedUsers:[],roomMapping:fallbackRooms
 };
 
 function qs(id){return document.getElementById(id)}
@@ -45,7 +44,7 @@ function fastRender(){
   renderMyReports();
 
   if(qs('userAuthEmail')){
-    const roleLabel=appData.profileFound===false?'PERFIL NÃO CONFIGURADO':(appData.userRoleDesc||'VISUALIZADOR');
+    const roleLabel=appData.profileFound===false?'VISUALIZADOR':(appData.userRoleDesc||'VISUALIZADOR');
     qs('userAuthEmail').textContent=`${appData.userEmail||'Conectando...'} (${roleLabel})`;
   }
   if(qs('btnTabEEBManager'))qs('btnTabEEBManager').style.display=appData.isEEB?'inline-flex':'none';
@@ -71,12 +70,10 @@ function fetchLiveBackendData(){
       if(qs('syncBar'))qs('syncBar').style.display='none';
       d=d||{};
       ['historyList','reviewQueueList','myReportsList','bonificacoesList','falseReportsList','authorizedUsers'].forEach(k=>d[k]=Array.isArray(d[k])?d[k]:[]);
-      d.studentsByRoom=d.studentsByRoom||{};d.roomMapping=d.roomMapping||fallbackRooms;
+      d.studentsByRoom=d.studentsByRoom||{};
+      d.roomMapping=d.roomMapping||fallbackRooms;
+      d.bonusPolicy=d.bonusPolicy||{monthlyCap:6,categories:[]};
       appData=d;fastRender();
-      if(appData.profileFound===false&&appData.userEmail&&!profileWarningShown){
-        profileWarningShown=true;
-        showToast('Perfil não configurado','Seu e-mail não foi encontrado na aba Permissoes. Cadastre-o para liberar a visão correta.','warning');
-      }
     })
     .withFailureHandler(e=>{
       if(qs('syncBar'))qs('syncBar').style.display='none';
