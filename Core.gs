@@ -34,9 +34,28 @@ function normalizarTurmaPermissao_(valor) {
   return /^TODAS\b/i.test(turma) ? 'TODAS' : turma;
 }
 
+function normalizarPapel_(role) {
+  var papel = String(role || '').trim();
+  try {
+    papel = papel.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch (e) {}
+  return papel.toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
 function perfilEhEEB_(role) {
-  var papel = String(role || '').toUpperCase();
-  return papel.indexOf('EEB') !== -1 || papel.indexOf('DIREÇÃO') !== -1 || papel.indexOf('DIRETOR') !== -1;
+  var papel = normalizarPapel_(role);
+  return papel.indexOf('EEB') !== -1 ||
+    papel.indexOf('GESTAO') !== -1 ||
+    papel.indexOf('GESTOR') !== -1 ||
+    papel.indexOf('DIRECAO') !== -1 ||
+    papel.indexOf('DIRETOR') !== -1 ||
+    papel.indexOf('ESPECIALISTA') !== -1 ||
+    papel.indexOf('SUPERVISAO') !== -1 ||
+    papel.indexOf('COORDENACAO') !== -1;
+}
+
+function permissaoEhGestao_(role, ownRoom, canEdit) {
+  return perfilEhEEB_(role) || (normalizarTurmaPermissao_(ownRoom) === 'TODAS' && canEdit === true);
 }
 
 function getPermissaoUsuario_(email) {
@@ -46,7 +65,8 @@ function getPermissaoUsuario_(email) {
     role: 'VISUALIZADOR',
     ownRoom: '',
     canEdit: false,
-    isEEB: false
+    isEEB: false,
+    found: false
   };
 
   if (!normalizedEmail) return perfil;
@@ -60,13 +80,17 @@ function getPermissaoUsuario_(email) {
     var rowEmail = String(values[i][0] || '').toLowerCase().trim();
     if (rowEmail !== normalizedEmail) continue;
 
+    var explicitCanEdit = String(values[i][3] || '').toUpperCase().trim() === 'SIM';
+    perfil.found = true;
     perfil.role = String(values[i][1] || '').trim() || 'VISUALIZADOR';
     perfil.ownRoom = normalizarTurmaPermissao_(values[i][2]);
-    perfil.canEdit = String(values[i][3] || '').toUpperCase() === 'SIM';
-    perfil.isEEB = perfilEhEEB_(perfil.role);
+    perfil.isEEB = permissaoEhGestao_(perfil.role, perfil.ownRoom, explicitCanEdit);
+    perfil.canEdit = perfil.isEEB || explicitCanEdit;
+
     if (perfil.isEEB) {
       perfil.canEdit = true;
       perfil.ownRoom = 'TODAS';
+      if (!perfilEhEEB_(perfil.role)) perfil.role = 'EEB / GESTÃO';
     }
     return perfil;
   }
