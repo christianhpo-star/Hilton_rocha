@@ -5,24 +5,3 @@ syncExperienceNav=function(tabId){
   if(fab)fab.style.display=appData.isEEB?'':'none';
   if(fab)fab.classList.toggle('active',tabId==='tab-eeb-manager');
 };
-
-const _polishBaseRenderHome=renderHomeExperience;
-renderHomeExperience=function(){
-  if(!appData.userEmail){
-    ['homeRank','homeScore','homeGap','homeMyPending'].forEach(id=>{if(qs(id))qs(id).textContent='—'});
-    if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML='<div class="skeleton-line wide"></div><div class="skeleton-line"></div>';
-    return;
-  }
-  _polishBaseRenderHome();
-  if(appData.isEEB){
-    if(qs('homeMyPending')){
-      qs('homeMyPending').textContent=Number(appData.pendingReviewCount)||0;
-      const label=qs('homeMyPending').previousElementSibling;if(label)label.textContent='AGUARDANDO ANÁLISE';
-    }
-    const statusTitle=document.querySelector('#tab-home .home-status-card .card-title>div');
-    if(statusTitle)statusTitle.innerHTML='<i class="fa-solid fa-shield-halved"></i> Fila pedagógica';
-    const reports=appData.reviewQueueList||[],counts={PENDENTE:0,APROVADA:0,NEGADA:0,FALSA:0};
-    reports.forEach(r=>{const s=String(r.status||'').toUpperCase();if(counts[s]!==undefined)counts[s]++});
-    if(qs('homeReportSummary'))qs('homeReportSummary').innerHTML=`<div class="home-report-mini"><strong>${counts.PENDENTE}</strong><span>Pendentes</span></div><div class="home-report-mini"><strong>${counts.APROVADA}</strong><span>Aprovadas</span></div><div class="home-report-mini"><strong>${counts.NEGADA}</strong><span>Negadas</span></div><div class="home-report-mini"><strong>${counts.FALSA}</strong><span>Falsas</span></div>`;
-  }
-};
