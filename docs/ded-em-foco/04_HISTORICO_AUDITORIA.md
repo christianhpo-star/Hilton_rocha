@@ -15,7 +15,7 @@ A regra foi refinada para combinar **norma geral vigente + regra oficial de tran
 
 As duas evidências são registradas. O painel segue a instrução específica de continuidade para as turmas em andamento, até eventual ato posterior da SEE/MG.
 
-## Passo 3 — revisar o saldo técnico de ~110
+## Passo 3 — investigar o saldo técnico de ~110
 
 O cenário 6 A/S + 6 A/S reproduz -110, mas essa distribuição não possui fonte localizada. A hipótese foi retirada do cálculo oficial.
 
@@ -60,7 +60,15 @@ A versão local foi testada em Chromium/Playwright:
 - recomposição em sessão de teste levou o 3º trimestre de 65/66 para 66/66;
 - erros JavaScript/console: **0**.
 
-O HTML preenchido não é publicado neste repositório porque o repositório é público e o arquivo contém dados internos/names de docentes.
+O HTML preenchido não é publicado neste repositório porque o repositório é público e o arquivo contém dados internos/nomes de docentes.
+
+## Passo 8 — cruzar evidência contemporânea do fechamento
+
+Foi localizado relatório de visita pedagógica de 26/05/2026. O documento registra que ainda havia **duas turmas pendentes no DED+ por questões com o SENAI e troca de professores**, em processo de regularização.
+
+A evidência é temporalmente coerente com a anomalia do T1, mas o relatório não identifica quais eram as duas turmas. Portanto, não se atribui automaticamente essa pendência ao 2º SER.
+
+A versão local do painel passou a mostrar essa evidência com a ressalva acima e foi novamente testada: 171 registros / 24 docentes / 9 turmas, zero erros JavaScript.
 
 ## Branch e PR
 
@@ -77,11 +85,14 @@ Início da auditoria:
 - `3e67a98` — investigação inicial do saldo técnico;
 - `d7887bb` — histórico inicial.
 
-Refinamento atual:
+Refinamento:
 
 - `636d30e` — registra conflito normativo e regra de transição EMTI;
 - `2d110e7` — corrige 199 datas localizadas x meta legal de 200;
-- `75bff13` — localiza diferença de 100 aulas no bloco técnico do 2º SER.
+- `75bff13` — localiza diferença de 100 aulas no bloco técnico do 2º SER;
+- `c91bfd9` — consolida histórico e testes;
+- `3b8e609` — registra regressão Chromium/Playwright;
+- `a5e473d` — registra evidência operacional de pendências SENAI no fechamento do T1.
 
 ## Gates antes de concluir o PR
 
@@ -89,5 +100,6 @@ Refinamento atual:
 - [ ] confirmar data homologada da recomposição de 08/12;
 - [x] executar validação sintática;
 - [x] executar regressão em navegador;
+- [x] cruzar evidência contemporânea de fechamento;
 - [x] manter dados nominais fora do repositório público;
 - [ ] revisar novamente o PR depois das duas pendências documentais.
