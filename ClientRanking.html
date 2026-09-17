@@ -10,7 +10,7 @@ function renderRanking(){
     if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);
     else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);
     else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);
-    else if(r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1);
+    else if(r.includes('fora')||r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1);
   });
 
   (appData.bonificacoesList||[]).forEach(b=>{if(rooms[b.roomCode]&&monthOk(b.timestamp))rooms[b.roomCode].bonus+=Number(b.points)||0});
