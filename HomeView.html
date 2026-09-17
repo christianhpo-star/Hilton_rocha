@@ -1,0 +1,68 @@
+<div id="tab-home" class="tab-content active">
+  <section class="home-hero" id="homeHero">
+    <div class="home-hero-main">
+      <div class="home-room-symbol" id="homeRoomSymbol"><i class="fa-solid fa-users"></i></div>
+      <div>
+        <span class="eyebrow" id="homeEyebrow">NOSSA TURMA, NOSSO COMPROMISSO</span>
+        <h2 id="homeTitle">Acompanhe sua turma</h2>
+        <p id="homeSubtitle">Pontuação, posição e novidades da competição em um só lugar.</p>
+      </div>
+    </div>
+    <div class="home-hero-actions">
+      <button type="button" class="home-primary-action" onclick="switchTab('tab-registrar')"><i class="fa-solid fa-paper-plane"></i> Enviar denúncia</button>
+      <button type="button" class="home-secondary-action" onclick="switchTab('tab-ranking')"><i class="fa-solid fa-ranking-star"></i> Ver ranking completo</button>
+    </div>
+  </section>
+
+  <section class="home-kpi-grid">
+    <article class="home-kpi-card">
+      <span class="home-kpi-icon"><i class="fa-solid fa-trophy"></i></span>
+      <div><small>POSIÇÃO ATUAL</small><strong id="homeRank">—</strong><span id="homeRankHint">Carregando classificação</span></div>
+    </article>
+    <article class="home-kpi-card">
+      <span class="home-kpi-icon"><i class="fa-solid fa-bolt"></i></span>
+      <div><small>PONTUAÇÃO</small><strong id="homeScore">—</strong><span id="homeScoreHint">de 100 pontos de rotina</span></div>
+    </article>
+    <article class="home-kpi-card">
+      <span class="home-kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
+      <div><small>PRÓXIMA POSIÇÃO</small><strong id="homeGap">—</strong><span id="homeGapHint">Calculando distância</span></div>
+    </article>
+    <article class="home-kpi-card">
+      <span class="home-kpi-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+      <div><small>MINHAS PENDENTES</small><strong id="homeMyPending">—</strong><span>Aguardando análise pedagógica</span></div>
+    </article>
+  </section>
+
+  <section class="home-grid">
+    <article class="glass-card home-progress-card">
+      <div class="card-title compact-title">
+        <div><i class="fa-solid fa-chart-simple"></i> Minha turma</div>
+        <span id="homeRoomBadge" class="room-identity-badge">Turma</span>
+      </div>
+      <div id="homeRoomSummary" class="home-room-summary">
+        <div class="skeleton-line wide"></div><div class="skeleton-line"></div>
+      </div>
+      <div class="home-progress-track"><div id="homeProgressFill" class="home-progress-fill"></div></div>
+      <div id="homeCriteriaChips" class="home-criteria-chips"></div>
+    </article>
+
+    <article class="glass-card home-status-card">
+      <div class="card-title compact-title">
+        <div><i class="fa-solid fa-paper-plane"></i> Minhas denúncias</div>
+        <button type="button" class="text-action" onclick="switchTab('tab-registrar')">Ver todas <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+      <div id="homeReportSummary" class="home-report-summary"></div>
+    </article>
+  </section>
+
+  <section class="glass-card activity-card">
+    <div class="card-title compact-title">
+      <div><i class="fa-solid fa-sparkles"></i> Acontecendo agora</div>
+      <span class="subtle-copy">Atualizações sem exposição de estudantes</span>
+    </div>
+    <div id="activityFeed" class="activity-feed">
+      <div class="skeleton-feed"><span></span><div><div class="skeleton-line wide"></div><div class="skeleton-line"></div></div></div>
+      <div class="skeleton-feed"><span></span><div><div class="skeleton-line wide"></div><div class="skeleton-line"></div></div></div>
+    </div>
+  </section>
+</div>
