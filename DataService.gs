@@ -7,39 +7,25 @@ function getAppData() {
   var shPerm = ss.getSheetByName('Permissoes');
   var permData = lerDadosWeb_(shPerm);
   var authorizedUsers = [];
-  var currentProfile = {
-    email: userEmail,
-    role: 'VISUALIZADOR',
-    ownRoom: '',
-    canEdit: false,
-    isEEB: false
-  };
+  var currentProfile = getPermissaoUsuario_(userEmail);
 
   for (var i = 1; i < permData.length; i++) {
     var rowEmail = String(permData[i][0] || '').toLowerCase().trim();
     if (!rowEmail) continue;
     var rowRole = String(permData[i][1] || '').trim();
     var rowOwnRoom = normalizarTurmaPermissao_(permData[i][2]);
-    var rowIsEEB = perfilEhEEB_(rowRole);
-    var rowCanEdit = rowIsEEB || String(permData[i][3] || '').toUpperCase() === 'SIM';
+    var explicitCanEdit = String(permData[i][3] || '').toUpperCase().trim() === 'SIM';
+    var rowIsEEB = permissaoEhGestao_(rowRole, rowOwnRoom, explicitCanEdit);
+    var rowCanEdit = rowIsEEB || explicitCanEdit;
     if (rowIsEEB) rowOwnRoom = 'TODAS';
 
     authorizedUsers.push({
       email: rowEmail,
-      role: rowRole,
+      role: rowRole || (rowIsEEB ? 'EEB / GESTÃO' : 'VISUALIZADOR'),
       ownRoom: rowOwnRoom,
-      canEdit: rowCanEdit
+      canEdit: rowCanEdit,
+      isEEB: rowIsEEB
     });
-
-    if (rowEmail === userEmail) {
-      currentProfile = {
-        email: rowEmail,
-        role: rowRole || 'VISUALIZADOR',
-        ownRoom: rowOwnRoom,
-        canEdit: rowCanEdit,
-        isEEB: rowIsEEB
-      };
-    }
   }
 
   var shAlunos = ss.getSheetByName('Lista_Alunos');
@@ -146,6 +132,7 @@ function getAppData() {
 
   return {
     userEmail: userEmail,
+    profileFound: currentProfile.found === true,
     isEEB: currentProfile.isEEB,
     userCanEdit: currentProfile.canEdit,
     userRoleDesc: currentProfile.role,
