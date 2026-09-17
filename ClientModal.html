@@ -1,0 +1,33 @@
+let decisionModalState=null;
+function openDecisionModal(type,report){
+  if(!appData.isEEB||!report)return;
+  const modal=qs('decisionModal'),reason=qs('decisionModalReason'),confirmBtn=qs('decisionModalConfirm');if(!modal)return;
+  decisionModalState={type,report};const normalized=String(type||'').toUpperCase();
+  const cfg=normalized==='APPROVE'
+    ?{eyebrow:'CONFIRMAR OCORRÊNCIA',title:'Aprovar denúncia',icon:'fa-circle-check',impact:'A ocorrência entrará imediatamente no cálculo da turma e o ranking será atualizado.',impactClass:'',button:'Aprovar e pontuar',buttonClass:'',placeholder:'Observação opcional sobre a confirmação.'}
+    :normalized==='DENY'
+      ?{eyebrow:'ARQUIVAR SEM PONTUAR',title:'Negar denúncia',icon:'fa-circle-minus',impact:'A denúncia ficará registrada para auditoria, mas nenhum ponto será alterado.',impactClass:'deny',button:'Negar denúncia',buttonClass:'deny',placeholder:'Explique brevemente por que a situação não foi confirmada.'}
+      :{eyebrow:'CLASSIFICAÇÃO CRÍTICA',title:'Marcar como falsa',icon:'fa-triangle-exclamation',impact:`A denúncia não entrará no ranking e a turma ${report.reporterRoom||'do denunciante'} poderá perder ${Number(appData.falseReportPenaltyPoints)||1} ponto. A justificativa é obrigatória.`,impactClass:'false',button:'Confirmar denúncia falsa',buttonClass:'false',placeholder:'Descreva objetivamente por que a denúncia foi considerada falsa.'};
+  qs('decisionModalEyebrow').textContent=cfg.eyebrow;qs('decisionModalTitle').textContent=cfg.title;qs('decisionModalIcon').innerHTML=`<i class="fa-solid ${cfg.icon}"></i>`;
+  qs('decisionModalReport').innerHTML=`<strong>${esc(report.studentName)} · ${esc(report.rule)}</strong><span><i class="fa-solid fa-school"></i> ${esc(report.roomCode)} · <i class="fa-regular fa-clock"></i> ${esc(report.timestamp)}</span>${report.obs?`<span><i class="fa-regular fa-message"></i> ${esc(report.obs)}</span>`:''}`;
+  const impact=qs('decisionModalImpact');impact.className=`modal-impact-box ${cfg.impactClass}`.trim();impact.textContent=cfg.impact;
+  qs('decisionModalReasonLabel').textContent=normalized==='APPROVE'?'Observação da aprovação (opcional)':'Justificativa da decisão';reason.value=normalized==='DENY'?'Não confirmada após análise pedagógica.':'';reason.placeholder=cfg.placeholder;
+  confirmBtn.className=`modal-confirm ${cfg.buttonClass}`.trim();confirmBtn.innerHTML=`<i class="fa-solid ${cfg.icon}"></i> ${cfg.button}`;
+  modal.classList.add('open');modal.setAttribute('aria-hidden','false');setTimeout(()=>reason.focus(),120);
+}
+function closeDecisionModal(){const modal=qs('decisionModal');if(!modal)return;modal.classList.remove('open');modal.setAttribute('aria-hidden','true');decisionModalState=null}
+function setDecisionModalBusy(busy){const btn=qs('decisionModalConfirm');if(!btn)return;btn.disabled=busy;if(busy){btn.dataset.previous=btn.innerHTML;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Salvando decisão...'}else if(btn.dataset.previous){btn.innerHTML=btn.dataset.previous;delete btn.dataset.previous}}
+function applyReviewedReportLocally(res){
+  replaceReportLocally(res.report);if(res.occurrence&&!appData.historyList.some(i=>String(i.id)===String(res.occurrence.id)))appData.historyList.unshift(res.occurrence);if(res.falseReport)appData.falseReportsList.unshift(res.falseReport);refreshPendingCounters();renderReviewQueue();renderMyReports();renderFalseReports();renderRanking();renderHistory();renderActivityFeed();renderHomeExperience();
+}
+function confirmDecisionModal(){
+  if(!decisionModalState)return;const {type,report}=decisionModalState;const reason=String(qs('decisionModalReason')?.value||'').trim();if(type==='FALSE'&&!reason)return showToast('Justificativa obrigatória','Informe por que a denúncia foi considerada falsa.','warning');
+  setDecisionModalBusy(true);
+  const ok=res=>{setDecisionModalBusy(false);if(!res?.success)return showToast('Decisão não concluída',res?.message||'A denúncia não foi alterada.','warning');applyReviewedReportLocally(res);closeDecisionModal();showToast(type==='APPROVE'?'Denúncia aprovada':type==='DENY'?'Denúncia negada':'Denúncia falsa registrada',res.message||'Decisão salva.',type==='APPROVE'?'success':'warning')};
+  const fail=e=>{setDecisionModalBusy(false);showToast('Erro ao salvar decisão',e.message||String(e),'error')};
+  if(type==='APPROVE')google.script.run.withSuccessHandler(ok).withFailureHandler(fail).aprovarDenunciaPendente(report.id,reason);
+  else if(type==='DENY')google.script.run.withSuccessHandler(ok).withFailureHandler(fail).negarDenunciaPendente(report.id,reason);
+  else google.script.run.withSuccessHandler(ok).withFailureHandler(fail).marcarDenunciaFalsaPendente(report.id,reason);
+}
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&qs('decisionModal')?.classList.contains('open'))closeDecisionModal()});
+window.addEventListener('click',e=>{if(e.target===qs('decisionModal'))closeDecisionModal()});
