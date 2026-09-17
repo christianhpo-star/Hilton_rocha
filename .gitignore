@@ -1,0 +1,13 @@
+# Credenciais locais do clasp — nunca versionar
+.clasprc.json
+.clasprc*.json
+
+# Dependencias e temporarios
+node_modules/
+.tmp/
+tmp/
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
