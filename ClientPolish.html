@@ -1,7 +1,97 @@
+function canCurrentUserSendReports(){return appData.isEEB||appData.userCanEdit===true}
+
+function installAccessPolishStyles(){
+  if(document.getElementById('accessPolishStyles'))return;
+  const style=document.createElement('style');style.id='accessPolishStyles';
+  style.textContent=`
+    .school-logo-mark{background:#fff!important;padding:2px!important;overflow:hidden!important;border:1px solid rgba(22,101,52,.38)!important;box-shadow:0 8px 24px rgba(2,8,23,.28)!important}
+    .school-logo-mark img{width:100%;height:100%;object-fit:contain;display:block;border-radius:10px}
+    @media(max-width:720px){.mobile-bottom-nav{grid-template-columns:repeat(6,1fr)!important}.mobile-nav-item{min-width:0}}
+  `;
+  document.head.appendChild(style);
+}
+
+function applyAccessVisibility(){
+  installAccessPolishStyles();
+  const canSend=canCurrentUserSendReports();
+  const desktopSend=qs('btnTabRegistrar');if(desktopSend)desktopSend.style.display=canSend?'inline-flex':'none';
+  const mobileSend=qs('mobileNavRegistrar');if(mobileSend)mobileSend.style.display=canSend?'flex':'none';
+  const registrar=qs('tab-registrar');if(registrar)registrar.setAttribute('aria-hidden',canSend?'false':'true');
+  const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'':'none';
+}
+
+function renderPublicViewerHome(ranking){
+  const leader=ranking[0],leaderCode=leader?.[0]||'',leaderScore=leader?.[1]?.total||0;
+  applyManagementTheme(qs('homeHero'));
+  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML='<i class="fa-solid fa-school"></i>';
+  if(qs('homeEyebrow'))qs('homeEyebrow').textContent='VISÃO DO ESTUDANTE';
+  if(qs('homeTitle'))qs('homeTitle').textContent='Acompanhe a competição';
+  if(qs('homeSubtitle'))qs('homeSubtitle').textContent='Consulte o ranking, os reconhecimentos e todas as denúncias que já foram aprovadas pela EEB/Gestão.';
+  setHomeAction('homePrimaryAction','fa-ranking-star','Ver ranking','tab-ranking');
+  setHomeAction('homeSecondaryAction','fa-circle-check','Histórico aprovado','tab-historico');
+
+  setHomeKpi(1,'LÍDER ATUAL',leaderCode||'—',leaderCode?`${leaderScore} pontos neste recorte`:'Aguardando classificação','fa-trophy');
+  setHomeKpi(2,'DENÚNCIAS APROVADAS',(appData.historyList||[]).length,'visíveis no histórico oficial','fa-circle-check');
+  setHomeKpi(3,'RECONHECIMENTOS',(appData.bonificacoesList||[]).length,'registros positivos lançados','fa-star');
+  setHomeKpi(4,'PERFIL','ALUNO','visualização sem permissão de denúncia','fa-eye');
+
+  if(qs('homeMainPanelTitle'))qs('homeMainPanelTitle').innerHTML='<i class="fa-solid fa-ranking-star"></i> Classificação geral';
+  if(qs('homeRoomBadge')){qs('homeRoomBadge').textContent=`${ranking.length} turmas`;applyManagementTheme(qs('homeRoomBadge'))}
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML=leader?`<h3>Líder atual: ${esc(leaderCode)}</h3><p>${esc((appData.roomMapping||{})[leaderCode]||leaderCode)} está com ${leaderScore} pontos neste período.</p>`:'<h3>Classificação ainda sem dados</h3><p>Assim que houver turmas configuradas, o ranking aparecerá aqui.</p>';
+  if(qs('homeProgressFill'))qs('homeProgressFill').style.width=`${Math.max(0,Math.min(100,leaderScore))}%`;
+  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML=ranking.slice(0,3).map(([code,s],idx)=>`<span>${idx+1}º ${esc(code)} · ${s.total} pts</span>`).join('');
+
+  if(qs('homeStatusTitle'))qs('homeStatusTitle').innerHTML='<i class="fa-solid fa-shield-check"></i> Transparência do projeto';
+  setHomeAction('homeStatusAction','fa-arrow-right','Abrir histórico','tab-historico');
+  if(qs('homeReportSummary'))qs('homeReportSummary').innerHTML=`<div class="home-report-mini"><strong>${(appData.historyList||[]).length}</strong><span>Denúncias aprovadas</span></div><div class="home-report-mini"><strong>${(appData.bonificacoesList||[]).length}</strong><span>Reconhecimentos</span></div><div class="home-report-mini"><strong>${ranking.length}</strong><span>Turmas no ranking</span></div><div class="home-report-mini"><strong><i class="fa-solid fa-lock"></i></strong><span>Envio restrito a representantes</span></div>`;
+  if(qs('homeActivityTitle'))qs('homeActivityTitle').innerHTML='<i class="fa-solid fa-building-circle-check"></i> Movimentações oficiais da escola';
+  if(qs('homeActivitySubtitle'))qs('homeActivitySubtitle').textContent='Somente registros oficiais; denúncias pendentes não aparecem aqui';
+}
+
+function renderPublicActivityFeed(){
+  const root=qs('activityFeed');if(!root)return;const events=[];
+  (appData.historyList||[]).forEach(i=>events.push({time:parseBrTimestamp(i.timestamp),stamp:i.timestamp,type:'approved',icon:'fa-circle-check',title:`${i.roomCode} teve uma ocorrência aprovada`,detail:canonicalRuleLabel(i.rule)}));
+  (appData.bonificacoesList||[]).forEach(b=>events.push({time:parseBrTimestamp(b.timestamp),stamp:b.timestamp,type:'bonus',icon:'fa-star',title:`${b.roomCode} recebeu +${Number(b.points)||0} pontos`,detail:String(b.category||'Reconhecimento pedagógico')}));
+  events.sort((a,b)=>b.time-a.time);const list=events.slice(0,8);root.innerHTML='';
+  if(!list.length){root.innerHTML='<div class="empty-state"><i class="fa-solid fa-sparkles"></i>Ainda não há movimentações oficiais neste período.</div>';return}
+  list.forEach((e,idx)=>{
+    const item=document.createElement('div');item.className=`activity-item ${e.type}`;item.style.animationDelay=`${idx*35}ms`;
+    const icon=document.createElement('span');icon.className='activity-icon';icon.innerHTML=`<i class="fa-solid ${e.icon}"></i>`;
+    const copy=document.createElement('div');copy.className='activity-copy';const strong=document.createElement('strong');strong.textContent=e.title;const detail=document.createElement('span');detail.textContent=e.detail;copy.append(strong,detail);
+    const time=document.createElement('span');time.className='activity-time';time.textContent=shortTimestamp(e.stamp);item.append(icon,copy,time);root.appendChild(item);
+  });
+}
+
+const _polishBaseRenderHome=renderHomeExperience;
+renderHomeExperience=function(){
+  if(!appData.isEEB&&!appData.userCanEdit){renderPublicViewerHome(getExperienceRanking());return}
+  _polishBaseRenderHome();
+};
+
+const _polishBaseActivityFeed=renderActivityFeed;
+renderActivityFeed=function(){
+  if(!appData.isEEB&&!appData.userCanEdit){renderPublicActivityFeed();return}
+  _polishBaseActivityFeed();
+};
+
 const _polishBaseSyncExperienceNav=syncExperienceNav;
 syncExperienceNav=function(tabId){
   _polishBaseSyncExperienceNav(tabId);
-  const fab=qs('mobileEEBReview');
-  if(fab)fab.style.display=appData.isEEB?'':'none';
+  applyAccessVisibility();
+  const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'':'none';
   if(fab)fab.classList.toggle('active',tabId==='tab-eeb-manager');
 };
+
+const _polishBaseFastRender=fastRender;
+fastRender=function(){_polishBaseFastRender();applyAccessVisibility()};
+
+const _polishBaseSwitchTab=switchTab;
+switchTab=function(id){
+  if(id==='tab-registrar'&&!canCurrentUserSendReports()){
+    showToast('Envio restrito','Somente representantes autorizados e EEB/Gestão podem enviar denúncias.','warning');
+    id='tab-home';
+  }
+  _polishBaseSwitchTab(id);applyAccessVisibility();
+};
+
+window.addEventListener('load',applyAccessVisibility);
