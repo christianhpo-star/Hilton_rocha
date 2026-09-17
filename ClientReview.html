@@ -4,34 +4,26 @@ function setReviewFilter(filter,btn){
   if(btn)btn.classList.add('active');
   renderReviewQueue();
 }
-
 function replaceReportLocally(updated){
   if(!updated)return;
   appData.reviewQueueList=(appData.reviewQueueList||[]).map(r=>String(r.id)===String(updated.id)?updated:r);
   appData.myReportsList=(appData.myReportsList||[]).map(r=>String(r.id)===String(updated.id)?updated:r);
 }
-
 function refreshPendingCounters(){
   appData.pendingReviewCount=(appData.reviewQueueList||[]).filter(r=>String(r.status||'').toUpperCase()==='PENDENTE').length;
   const count=Number(appData.pendingReviewCount)||0;
   if(qs('pendingReviewCount'))qs('pendingReviewCount').textContent=count;
   if(qs('navPendingBadge')){qs('navPendingBadge').textContent=count;qs('navPendingBadge').style.display=appData.isEEB&&count>0?'inline-flex':'none'}
+  if(qs('mobilePendingBadge')){qs('mobilePendingBadge').textContent=count;qs('mobilePendingBadge').style.display=appData.isEEB&&count>0?'flex':'none'}
 }
-
 function renderReviewQueue(){
   const root=qs('reviewQueueContainer');if(!root)return;
   let reports=[...(appData.reviewQueueList||[])];
   if(activeReviewFilter!=='TODAS')reports=reports.filter(r=>String(r.status||'').toUpperCase()===activeReviewFilter);
-  reports.sort((a,b)=>String(a.status)==='PENDENTE'&&String(b.status)!=='PENDENTE'?-1:String(b.status)==='PENDENTE'&&String(a.status)!=='PENDENTE'?1:0);
-
-  if(!reports.length){
-    root.innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i>${activeReviewFilter==='PENDENTE'?'Nenhuma denúncia aguardando análise.':'Nenhum registro neste filtro.'}</div>`;
-    refreshPendingCounters();return;
-  }
-
+  reports.sort((a,b)=>{const ap=String(a.status)==='PENDENTE',bp=String(b.status)==='PENDENTE';if(ap!==bp)return ap?-1:1;return parseBrTimestamp(b.timestamp)-parseBrTimestamp(a.timestamp)});
+  if(!reports.length){root.innerHTML=`<div class="empty-state"><i class="fa-solid fa-inbox"></i>${activeReviewFilter==='PENDENTE'?'Nenhuma denúncia aguardando análise.':'Nenhum registro neste filtro.'}</div>`;refreshPendingCounters();return}
   root.innerHTML=reports.map(r=>{
-    const status=String(r.status||'PENDENTE').toUpperCase();
-    const pending=status==='PENDENTE';
+    const status=String(r.status||'PENDENTE').toUpperCase(),pending=status==='PENDENTE';
     const obs=r.obs?`<div class="review-obs"><i class="fa-regular fa-message"></i> ${esc(r.obs)}</div>`:'';
     const decision=!pending&&r.reviewReason?`<div class="review-obs"><strong>Decisão:</strong> ${esc(r.reviewReason)}${r.reviewerEmail?`<br><small>Revisado por ${esc(r.reviewerEmail)} · ${esc(r.reviewedAt||'')}</small>`:''}</div>`:'';
     const actions=pending?`<div class="review-actions">
@@ -39,61 +31,11 @@ function renderReviewQueue(){
       <button class="review-action deny" onclick='handleDenyReport(${JSON.stringify(String(r.id))})'><i class="fa-solid fa-minus"></i> Negar</button>
       <button class="review-action false" onclick='handleFalseReport(${JSON.stringify(String(r.id))})'><i class="fa-solid fa-triangle-exclamation"></i> Falsa</button>
     </div>`:`<div class="review-actions"><span class="status-pill ${statusClass(status)}"><i class="fa-solid ${statusIcon(status)}"></i>${esc(status)}</span></div>`;
-    return `<article class="review-item">
-      <div>
-        <div class="review-item-head"><span class="status-pill ${statusClass(status)}"><i class="fa-solid ${statusIcon(status)}"></i>${esc(status)}</span><span class="review-item-title">${esc(r.studentName)} · ${esc(r.rule)}</span></div>
-        <div class="review-meta"><span><i class="fa-solid fa-school"></i> ${esc(r.roomCode)}</span><span><i class="fa-regular fa-clock"></i> ${esc(r.timestamp)}</span><span><i class="fa-solid fa-user-shield"></i> ${esc(r.reporterRoom||'Gestão')}</span><span>${esc(r.reporterEmail||'')}</span></div>
-        ${obs}${decision}
-      </div>${actions}
-    </article>`
+    return `<article class="review-item"><div><div class="review-item-head"><span class="status-pill ${statusClass(status)}"><i class="fa-solid ${statusIcon(status)}"></i>${esc(status)}</span><span class="review-item-title">${esc(r.studentName)} · ${esc(r.rule)}</span></div><div class="review-meta"><span><i class="fa-solid fa-school"></i> ${esc(r.roomCode)}</span><span><i class="fa-regular fa-clock"></i> ${esc(r.timestamp)}</span><span><i class="fa-solid fa-user-shield"></i> ${esc(r.reporterRoom||'Gestão')}</span><span>${esc(r.reporterEmail||'')}</span></div>${obs}${decision}</div>${actions}</article>`
   }).join('');
   refreshPendingCounters();
 }
-
-function handleApproveReport(id){
-  if(!appData.isEEB)return;
-  const report=(appData.reviewQueueList||[]).find(r=>String(r.id)===String(id));
-  if(!report)return;
-  if(!confirm(`Aprovar esta denúncia?\n\n${report.studentName} — ${report.rule}\n${report.roomCode}\n\nApós a aprovação, ela entrará no ranking.`))return;
-  google.script.run
-    .withSuccessHandler(res=>{
-      if(!res?.success)return showToast('Não foi possível aprovar',res?.message||'A denúncia não foi alterada.','warning');
-      replaceReportLocally(res.report);
-      if(res.occurrence&&!appData.historyList.some(i=>String(i.id)===String(res.occurrence.id)))appData.historyList.unshift(res.occurrence);
-      refreshPendingCounters();renderReviewQueue();renderMyReports();renderRanking();renderHistory();
-      showToast('Denúncia aprovada',res.message||'A ocorrência entrou no ranking.','success');
-    })
-    .withFailureHandler(e=>showToast('Erro ao aprovar',e.message||String(e),'error'))
-    .aprovarDenunciaPendente(id,'');
-}
-
-function handleDenyReport(id){
-  if(!appData.isEEB)return;
-  const report=(appData.reviewQueueList||[]).find(r=>String(r.id)===String(id));if(!report)return;
-  const reason=prompt(`Motivo da negativa:\n${report.studentName} — ${report.rule}\n\nO registro ficará arquivado e não afetará o ranking.`,'Não confirmada após análise pedagógica.');
-  if(reason===null)return;
-  google.script.run
-    .withSuccessHandler(res=>{
-      if(!res?.success)return showToast('Não foi possível negar',res?.message||'A denúncia não foi alterada.','warning');
-      replaceReportLocally(res.report);refreshPendingCounters();renderReviewQueue();renderMyReports();
-      showToast('Denúncia negada',res.message||'Nenhum ponto foi alterado.','warning');
-    })
-    .withFailureHandler(e=>showToast('Erro ao negar',e.message||String(e),'error'))
-    .negarDenunciaPendente(id,String(reason||'').trim());
-}
-
-function handleFalseReport(id){
-  if(!appData.isEEB)return;
-  const report=(appData.reviewQueueList||[]).find(r=>String(r.id)===String(id));if(!report)return;
-  const reason=prompt(`Justificativa para DENÚNCIA FALSA:\n${report.studentName} — ${report.rule}\n\nEssa decisão pode penalizar a turma do denunciante em 1 ponto.`,'');
-  if(reason===null)return;if(!String(reason).trim())return showToast('Justificativa obrigatória','Informe por que a denúncia foi considerada falsa.','warning');
-  google.script.run
-    .withSuccessHandler(res=>{
-      if(!res?.success)return showToast('Não foi possível classificar',res?.message||'A denúncia não foi alterada.','warning');
-      replaceReportLocally(res.report);if(res.falseReport)appData.falseReportsList.unshift(res.falseReport);
-      refreshPendingCounters();renderReviewQueue();renderMyReports();renderFalseReports();renderRanking();
-      showToast('Denúncia marcada como falsa',res.message||'A decisão foi registrada.','warning');
-    })
-    .withFailureHandler(e=>showToast('Erro na revisão',e.message||String(e),'error'))
-    .marcarDenunciaFalsaPendente(id,String(reason).trim());
-}
+function findPendingReport(id){return(appData.reviewQueueList||[]).find(r=>String(r.id)===String(id))}
+function handleApproveReport(id){const report=findPendingReport(id);if(appData.isEEB&&report)openDecisionModal('APPROVE',report)}
+function handleDenyReport(id){const report=findPendingReport(id);if(appData.isEEB&&report)openDecisionModal('DENY',report)}
+function handleFalseReport(id){const report=findPendingReport(id);if(appData.isEEB&&report)openDecisionModal('FALSE',report)}
