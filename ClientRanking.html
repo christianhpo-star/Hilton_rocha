@@ -1,1 +1,45 @@
-<!-- Lógica do ranking centralizada em ClientCore.html nesta revisão. -->
+function renderRanking(){
+  const root=qs('rankingContainer');if(!root)return;
+  const rooms={};roomCodes().forEach(c=>rooms[c]={uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0});
+  const monthOk=t=>activeRankingMonth==='ALL'||String(t||'').split('/')[1]?.trim()===activeRankingMonth;
+
+  // historyList contém somente ocorrências aprovadas pela EEB/Gestão.
+  (appData.historyList||[]).forEach(i=>{
+    if(!rooms[i.roomCode]||!monthOk(i.timestamp))return;
+    const r=String(i.rule||'').toLowerCase();
+    if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);
+    else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);
+    else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);
+    else if(r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1);
+  });
+
+  (appData.bonificacoesList||[]).forEach(b=>{if(rooms[b.roomCode]&&monthOk(b.timestamp))rooms[b.roomCode].bonus+=Number(b.points)||0});
+  (appData.falseReportsList||[]).forEach(f=>{
+    const referenceDate=f.originalTimestamp||f.timestamp;
+    if(f.reporterRoom&&rooms[f.reporterRoom]&&monthOk(referenceDate))rooms[f.reporterRoom].falsePenalty+=Number(f.penaltyPoints)||0;
+  });
+
+  const total=s=>s.uniforme+s.sapato+s.entrada+s.sala+s.bonus-s.falsePenalty;
+  const sorted=Object.entries(rooms).sort((a,b)=>total(b[1])-total(a[1]));
+  root.innerHTML='';
+  sorted.forEach(([code,s],idx)=>{
+    const score=total(s),card=document.createElement('article');card.className=`ranking-card ${idx===0?'leader':''}`;
+    const extras=[];
+    if(s.bonus)extras.push(`<span class="score-chip positive">+${s.bonus} bônus</span>`);
+    if(s.falsePenalty)extras.push(`<span class="score-chip negative">-${s.falsePenalty} denúncia falsa</span>`);
+    card.innerHTML=`
+      <div class="ranking-card-head">
+        <span class="rank-place">${idx===0?'🏆':idx+1+'º'}</span>
+        <div class="ranking-room"><strong>${esc(code)}</strong><small>${esc((appData.roomMapping||{})[code]||code)}</small></div>
+        <div class="ranking-score">${score}<small> pts</small></div>
+      </div>
+      <div class="main-progress-track"><div class="main-progress-fill" style="width:${Math.max(0,Math.min(100,score))}%"></div></div>
+      <div class="score-breakdown">
+        <span class="score-chip">Uniforme ${s.uniforme}/40</span>
+        <span class="score-chip">Sapato ${s.sapato}/30</span>
+        <span class="score-chip">Entrada ${s.entrada}/20</span>
+        <span class="score-chip">Sala ${s.sala}/10</span>${extras.join('')}
+      </div>`;
+    root.appendChild(card);
+  });
+}
