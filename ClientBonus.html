@@ -1,24 +1,90 @@
+function bonusPolicyCategories(){
+  return Array.isArray(appData.bonusPolicy?.categories)?appData.bonusPolicy.categories:[];
+}
+
+function selectedBonusCategory(){
+  const key=qs('bonifCategoria')?.value||'';
+  return bonusPolicyCategories().find(c=>c.key===key)||null;
+}
+
+function populateBonusCategories(){
+  const el=qs('bonifCategoria');if(!el)return;
+  const current=el.value;
+  el.innerHTML='<option value="">Selecione a categoria positiva</option>';
+  bonusPolicyCategories().forEach(c=>{
+    const o=document.createElement('option');o.value=c.key;o.textContent=`${c.label} (+${Number(c.points)||0})`;el.appendChild(o);
+  });
+  if([...el.options].some(o=>o.value===current))el.value=current;
+}
+
+function updateBonusPolicyPreview(){
+  const category=selectedBonusCategory();
+  const preview=qs('bonifPontosPreview'),desc=qs('bonifCategoriaDescricao'),cap=qs('bonifMonthlyCap'),reach=qs('bonifAlcance');
+  if(cap)cap.textContent=`+${Number(appData.bonusPolicy?.monthlyCap)||6}`;
+  if(preview)preview.textContent=category?`+${Number(category.points)||0} pts`:'—';
+  if(desc)desc.textContent=category?(category.description||'Reconhecimento pedagógico positivo.'):'Selecione uma categoria para ver o objetivo pedagógico e a pontuação correspondente.';
+  if(reach){
+    const collective=category?.scope==='COLLECTIVE';
+    if(collective)reach.value='Toda a Turma (Reconhecimento Coletivo)';
+    reach.disabled=!!collective;
+    if(collective&&desc)desc.textContent+=(desc.textContent?' ':'')+'Esta categoria é necessariamente coletiva.';
+  }
+}
+
 function populateBonifStudents(){
   const room=qs('bonifTurma')?.value,el=qs('bonifAlcance');if(!el)return;
+  const previous=el.value;
+  el.disabled=false;
   el.innerHTML='<option value="Toda a Turma (Reconhecimento Coletivo)">Toda a Turma (Reconhecimento Coletivo)</option>';
   ((appData.studentsByRoom||{})[room]||[]).forEach(s=>{const o=document.createElement('option');o.value=`${s.num} - ${s.nome}`;o.textContent=`${s.num}. ${s.nome}`;el.appendChild(o)});
+  if([...el.options].some(o=>o.value===previous))el.value=previous;
+  populateBonusCategories();
+  updateBonusPolicyPreview();
 }
 
 function handleSalvarBonificacao(e){
-  e.preventDefault();if(!appData.isEEB)return showToast('Acesso restrito','Apenas EEB/Gestão pode conceder bônus.','warning');
+  e.preventDefault();
+  if(!appData.isEEB)return showToast('Acesso restrito','Apenas EEB/Gestão pode registrar reconhecimentos.','warning');
+  const roomCode=qs('bonifTurma')?.value||'',categoryKey=qs('bonifCategoria')?.value||'',studentOrRoom=qs('bonifAlcance')?.value||'';
+  if(!roomCode)return showToast('Selecione a turma','Escolha qual turma receberá o reconhecimento.','warning');
+  if(!categoryKey)return showToast('Selecione a categoria','A pontuação é definida automaticamente pela categoria positiva.','warning');
+
   const btn=qs('btnSubmitBonif');btn.disabled=true;
   google.script.run
-    .withSuccessHandler(res=>{btn.disabled=false;if(res?.success){showToast('Reconhecimento registrado',`+${res.points||0} pontos concedidos.`);fetchLiveBackendData()}else showToast('Não foi possível salvar',res?.message||'Tente novamente.','warning')})
+    .withSuccessHandler(res=>{
+      btn.disabled=false;
+      if(!res?.success)return showToast('Não foi possível registrar',res?.message||'Tente novamente.','warning');
+      if(qs('bonifObs'))qs('bonifObs').value='';
+      if(res.recognitionOnly){
+        showToast('Reconhecimento registrado',`A turma já atingiu +${res.monthlyCap||6} no mês. A boa ação foi para o mural, sem aumentar o ranking.`,'warning');
+      }else if(res.capped){
+        showToast('Reconhecimento registrado',`Impacto de +${res.points||0}. O teto mensal de +${res.monthlyCap||6} foi atingido.`);
+      }else{
+        showToast('Reconhecimento registrado',`+${res.points||0} ponto(s). A turma está em +${res.monthlyUsedAfter||0}/${res.monthlyCap||6} de bônus no mês.`);
+      }
+      fetchLiveBackendData();
+    })
     .withFailureHandler(x=>{btn.disabled=false;showToast('Erro',x.message||String(x),'error')})
-    .salvarBonificacao({roomCode:qs('bonifTurma').value,studentOrRoom:qs('bonifAlcance').value,category:qs('bonifCategoria').value,points:Number(qs('bonifPontos').value)||10,obs:qs('bonifObs').value});
+    .salvarBonificacao({roomCode,studentOrRoom,categoryKey,obs:qs('bonifObs')?.value||''});
 }
 
 function renderBonificacoesMural(){
   const root=qs('muralBonificacoesContainer');if(!root)return;
-  root.innerHTML=(appData.bonificacoesList||[]).map(b=>`<div class="mural-card"><strong>${esc(b.roomCode)}: +${Number(b.points)||0} pts</strong><br><span>${esc(b.category)}</span>${b.obs?`<br><small style="color:var(--text-sub);">${esc(b.obs)}</small>`:''}${appData.isEEB?`<br><button class="btn-delete-action" style="margin-top:8px;" onclick='handleAnularBonificacao(${JSON.stringify(String(b.id))})'>Anular bônus</button>`:''}</div>`).join('')||'<div class="empty-state"><i class="fa-regular fa-star"></i>Nenhum reconhecimento registrado.</div>';
+  const cap=Number(appData.bonusPolicy?.monthlyCap)||6;
+  root.innerHTML=(appData.bonificacoesList||[]).map(b=>{
+    const pts=Number(b.points)||0;
+    const recorded=Number(b.recordedPoints)||pts;
+    const impact=pts>0?`+${pts} pt${pts===1?'':'s'} no ranking`:`Reconhecimento sem ponto adicional`;
+    const capNote=b.recognitionOnly||pts===0?`<br><small style="color:#fbbf24;"><i class="fa-solid fa-gauge-high"></i> Teto mensal de +${cap} já alcançado.</small>`:b.capped?`<br><small style="color:#fbbf24;">Impacto ajustado pelo teto mensal.</small>`:'';
+    const legacy=appData.isEEB&&recorded>pts?`<br><small style="color:var(--text-sub);">Valor histórico registrado: +${recorded}; impacto efetivo: +${pts}.</small>`:'';
+    return `<div class="mural-card"><strong>${esc(b.roomCode)} · ${impact}</strong><br><span>${esc(b.category||'Reconhecimento pedagógico')}</span>${b.studentOrRoom?`<br><small style="color:var(--text-sub);">${esc(b.studentOrRoom)}</small>`:''}${b.obs?`<br><small style="color:var(--text-sub);">${esc(b.obs)}</small>`:''}${capNote}${legacy}${appData.isEEB?`<br><button class="btn-delete-action" style="margin-top:8px;" onclick='handleAnularBonificacao(${JSON.stringify(String(b.id))})'>Anular reconhecimento</button>`:''}</div>`;
+  }).join('')||'<div class="empty-state"><i class="fa-regular fa-star"></i>Nenhum reconhecimento registrado.</div>';
 }
 
 function handleAnularBonificacao(id){
-  if(!confirm('Anular esta bonificação?'))return;
-  google.script.run.withSuccessHandler(res=>{if(res?.success){showToast('Bonificação anulada','O ranking será recalculado.','warning');fetchLiveBackendData()}else showToast('Não foi possível anular',res?.message||'','warning')}).withFailureHandler(e=>showToast('Erro',e.message||String(e),'error')).anularBonificacao(id);
+  if(!confirm('Anular este reconhecimento? A pontuação da turma será recalculada.'))return;
+  google.script.run
+    .withSuccessHandler(res=>{if(res?.success){showToast('Reconhecimento anulado','O ranking será recalculado.','warning');fetchLiveBackendData()}else showToast('Não foi possível anular',res?.message||'','warning')})
+    .withFailureHandler(e=>showToast('Erro',e.message||String(e),'error'))
+    .anularBonificacao(id);
 }
