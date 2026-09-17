@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#07111f">
     <title>Nossa Turma, Nosso Compromisso — EE Prof. Hilton Rocha</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,19 +13,20 @@
     <?!= include('Styles'); ?>
 </head>
 <body>
-    <div class="sync-bar" id="syncBar"><i class="fa-solid fa-arrows-rotate fa-spin"></i> Sincronizando com a planilha da escola...</div>
+    <div class="sync-bar" id="syncBar"><i class="fa-solid fa-arrows-rotate fa-spin"></i> Sincronizando dados da escola...</div>
     <?!= include('Nav'); ?>
-    <div class="main-wrapper">
+    <main class="main-wrapper">
         <?!= include('RegistrarView'); ?>
         <?!= include('RankingView'); ?>
         <?!= include('HistoryView'); ?>
         <?!= include('BonusView'); ?>
         <?!= include('RulesView'); ?>
         <?!= include('EEBView'); ?>
-    </div>
+    </main>
     <script>
         <?!= include('ClientCore'); ?>
         <?!= include('ClientOccurrences'); ?>
+        <?!= include('ClientReview'); ?>
         <?!= include('ClientRanking'); ?>
         <?!= include('ClientHistory'); ?>
         <?!= include('ClientBonus'); ?>
