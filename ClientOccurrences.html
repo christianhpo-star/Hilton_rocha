@@ -1,1 +1,56 @@
-<!-- Lógica de ocorrências centralizada em ClientCore.html nesta revisão. -->
+function hasDailyOccurrence(room,student,rule){
+  const today=todayBrazilKey();
+  const same=i=>String(i.timestamp||'').slice(0,10)===today&&String(i.roomCode||'').trim().toUpperCase()===String(room).trim().toUpperCase()&&String(i.studentName||'').trim().toUpperCase()===String(student).trim().toUpperCase()&&String(i.rule||'').trim().toUpperCase()===String(rule).trim().toUpperCase();
+  if((appData.historyList||[]).some(same))return true;
+  return(appData.myReportsList||[]).some(i=>['PENDENTE','APROVADA'].includes(String(i.status||'').toUpperCase())&&same(i));
+}
+
+function handleFormSubmit(e){
+  e.preventDefault();if(occurrenceSaveInFlight)return;
+  if(!appData.userCanEdit&&!appData.isEEB)return showToast('Acesso não autorizado','Seu usuário não possui permissão para enviar denúncias.','error');
+
+  const room=qs('roomSelect').value,student=qs('studentSelect').value,radio=document.querySelector('input[name="ruleOption"]:checked');
+  if(!room||!student||!radio)return showToast('Campos incompletos','Selecione turma, estudante e critério.','warning');
+  if(!appData.isEEB&&appData.userOwnRoom===room)return showToast('Turma bloqueada','Você não pode avaliar sua própria turma.','warning');
+  if(hasDailyOccurrence(room,student,radio.value))return showToast('Denúncia já registrada',`${student} já possui hoje uma denúncia ativa nesse critério.`,'warning');
+
+  const btn=qs('btnSubmitOcc');occurrenceSaveInFlight=true;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> ENVIANDO PARA ANÁLISE...';
+  const payload={roomCode:room,studentName:student,rule:radio.value,obs:qs('obsInput').value||'Registro via WebApp',requestId:buildRequestId()};
+
+  google.script.run
+    .withSuccessHandler(res=>{
+      occurrenceSaveInFlight=false;btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> ENVIAR PARA ANÁLISE';
+      if(!res||res.success===false)return showToast('Envio não realizado',res?.message||'A denúncia não foi registrada.','warning');
+
+      if(res.report){
+        if(!appData.myReportsList.some(i=>String(i.id)===String(res.report.id)))appData.myReportsList.unshift(res.report);
+        if(appData.isEEB&&!appData.reviewQueueList.some(i=>String(i.id)===String(res.report.id))){appData.reviewQueueList.unshift(res.report);appData.pendingReviewCount=(Number(appData.pendingReviewCount)||0)+1}
+      }
+
+      qs('studentSelect').value='';radio.checked=false;qs('obsInput').value='';
+      renderMyReports();renderReviewQueue();
+      if(qs('pendingReviewCount'))qs('pendingReviewCount').textContent=Number(appData.pendingReviewCount)||0;
+      if(qs('navPendingBadge')){qs('navPendingBadge').textContent=Number(appData.pendingReviewCount)||0;qs('navPendingBadge').style.display=appData.isEEB&&Number(appData.pendingReviewCount)>0?'inline-flex':'none'}
+      showToast(res.duplicateRequest?'Denúncia já recebida':'Enviada para análise',res.message||'A EEB/Gestão analisará antes de qualquer alteração no ranking.',res.duplicateRequest?'warning':'success');
+    })
+    .withFailureHandler(err=>{
+      occurrenceSaveInFlight=false;btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> ENVIAR PARA ANÁLISE';
+      showToast('Erro ao enviar',err.message||String(err),'error');
+    })
+    .salvarOcorrencia(payload);
+}
+
+function renderMyReports(){
+  const root=qs('myReportsContainer');if(!root)return;
+  const reports=(appData.myReportsList||[]).slice(0,8);
+  if(!reports.length){root.innerHTML='<div class="empty-state"><i class="fa-regular fa-paper-plane"></i>Suas denúncias enviadas aparecerão aqui com o status da análise.</div>';return}
+  root.innerHTML=reports.map(r=>{
+    const status=String(r.status||'PENDENTE').toUpperCase();
+    const reason=r.reviewReason?`<div style="font-size:.66rem;color:var(--text-sub);margin-top:4px;">${esc(r.reviewReason)}</div>`:'';
+    return `<div class="report-status-item">
+      <div class="report-status-icon"><i class="fa-solid ${statusIcon(status)}"></i></div>
+      <div class="report-status-main"><strong>${esc(r.studentName)} · ${esc(r.rule)}</strong><small>${esc(r.roomCode)} · ${esc(r.timestamp)}</small>${reason}</div>
+      <span class="status-pill ${statusClass(status)}"><i class="fa-solid ${statusIcon(status)}"></i>${esc(status)}</span>
+    </div>`
+  }).join('');
+}
