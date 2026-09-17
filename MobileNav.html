@@ -1,0 +1,10 @@
+<nav class="mobile-bottom-nav" aria-label="Navegação principal no celular">
+  <button type="button" class="mobile-nav-item active" data-mobile-tab="tab-home" onclick="switchTab('tab-home')"><i class="fa-solid fa-house"></i><span>Início</span></button>
+  <button type="button" class="mobile-nav-item" data-mobile-tab="tab-registrar" onclick="switchTab('tab-registrar')"><i class="fa-solid fa-paper-plane"></i><span>Enviar</span></button>
+  <button type="button" class="mobile-nav-item" data-mobile-tab="tab-ranking" onclick="switchTab('tab-ranking')"><i class="fa-solid fa-trophy"></i><span>Ranking</span></button>
+  <button type="button" class="mobile-nav-item" data-mobile-tab="tab-bonificacoes" onclick="switchTab('tab-bonificacoes')"><i class="fa-solid fa-star"></i><span>Destaques</span></button>
+  <button type="button" class="mobile-nav-item" data-mobile-tab="tab-regulamento" onclick="switchTab('tab-regulamento')"><i class="fa-solid fa-book-open"></i><span>Regras</span></button>
+</nav>
+<button type="button" id="mobileEEBReview" class="mobile-eeb-fab" onclick="switchTab('tab-eeb-manager')" style="display:none;" aria-label="Abrir fila de análise da EEB">
+  <i class="fa-solid fa-shield-halved"></i><span id="mobilePendingBadge" class="mobile-fab-badge" style="display:none;">0</span>
+</button>
