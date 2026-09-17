@@ -1,7 +1,7 @@
 function filaDenunciaToObject_(row) {
   return {
     id: String(row[0] || ''),
-    timestamp: String(row[1] || ''),
+    timestamp: formatTimestampWeb_(row[1]),
     roomCode: String(row[2] || '').trim(),
     studentName: row[3] || '',
     rule: row[4] || '',
@@ -11,7 +11,7 @@ function filaDenunciaToObject_(row) {
     obs: row[8] || '',
     requestId: row[9] || '',
     status: String(row[10] || REPORT_STATUS_PENDING).toUpperCase().trim(),
-    reviewedAt: String(row[11] || ''),
+    reviewedAt: formatTimestampWeb_(row[11]),
     reviewerEmail: row[12] || '',
     reviewReason: row[13] || '',
     officialOccurrenceId: row[14] || ''
@@ -99,7 +99,7 @@ function aprovarDenunciaPendente(idDenuncia, observacaoRevisao) {
       report: report,
       occurrence: {
         id: occurrenceId,
-        timestamp: String(row[1]),
+        timestamp: formatTimestampWeb_(row[1]),
         roomCode: String(row[2] || '').trim(),
         studentName: row[3],
         rule: row[4],
@@ -214,7 +214,7 @@ function marcarDenunciaFalsaPendente(idDenuncia, motivo) {
       id: reviewId,
       timestamp: reviewTimestamp,
       originalOccurrenceId: row[0],
-      originalTimestamp: String(row[1]),
+      originalTimestamp: formatTimestampWeb_(row[1]),
       accusedRoom: String(row[2] || '').trim(),
       studentName: row[3],
       rule: row[4],
