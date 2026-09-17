@@ -1,1 +1,24 @@
-<!-- Lógica de bonificações centralizada em ClientCore.html nesta revisão. -->
+function populateBonifStudents(){
+  const room=qs('bonifTurma')?.value,el=qs('bonifAlcance');if(!el)return;
+  el.innerHTML='<option value="Toda a Turma (Reconhecimento Coletivo)">Toda a Turma (Reconhecimento Coletivo)</option>';
+  ((appData.studentsByRoom||{})[room]||[]).forEach(s=>{const o=document.createElement('option');o.value=`${s.num} - ${s.nome}`;o.textContent=`${s.num}. ${s.nome}`;el.appendChild(o)});
+}
+
+function handleSalvarBonificacao(e){
+  e.preventDefault();if(!appData.isEEB)return showToast('Acesso restrito','Apenas EEB/Gestão pode conceder bônus.','warning');
+  const btn=qs('btnSubmitBonif');btn.disabled=true;
+  google.script.run
+    .withSuccessHandler(res=>{btn.disabled=false;if(res?.success){showToast('Reconhecimento registrado',`+${res.points||0} pontos concedidos.`);fetchLiveBackendData()}else showToast('Não foi possível salvar',res?.message||'Tente novamente.','warning')})
+    .withFailureHandler(x=>{btn.disabled=false;showToast('Erro',x.message||String(x),'error')})
+    .salvarBonificacao({roomCode:qs('bonifTurma').value,studentOrRoom:qs('bonifAlcance').value,category:qs('bonifCategoria').value,points:Number(qs('bonifPontos').value)||10,obs:qs('bonifObs').value});
+}
+
+function renderBonificacoesMural(){
+  const root=qs('muralBonificacoesContainer');if(!root)return;
+  root.innerHTML=(appData.bonificacoesList||[]).map(b=>`<div class="mural-card"><strong>${esc(b.roomCode)}: +${Number(b.points)||0} pts</strong><br><span>${esc(b.category)}</span>${b.obs?`<br><small style="color:var(--text-sub);">${esc(b.obs)}</small>`:''}${appData.isEEB?`<br><button class="btn-delete-action" style="margin-top:8px;" onclick='handleAnularBonificacao(${JSON.stringify(String(b.id))})'>Anular bônus</button>`:''}</div>`).join('')||'<div class="empty-state"><i class="fa-regular fa-star"></i>Nenhum reconhecimento registrado.</div>';
+}
+
+function handleAnularBonificacao(id){
+  if(!confirm('Anular esta bonificação?'))return;
+  google.script.run.withSuccessHandler(res=>{if(res?.success){showToast('Bonificação anulada','O ranking será recalculado.','warning');fetchLiveBackendData()}else showToast('Não foi possível anular',res?.message||'','warning')}).withFailureHandler(e=>showToast('Erro',e.message||String(e),'error')).anularBonificacao(id);
+}
