@@ -10,8 +10,9 @@ const fallbackRooms={
 let activeRankingMonth='09';
 let occurrenceSaveInFlight=false;
 let activeReviewFilter='PENDENTE';
+let profileWarningShown=false;
 let appData={
-  userEmail:'',isEEB:false,userCanEdit:false,userRoleDesc:'VISUALIZADOR',userOwnRoom:'',
+  userEmail:'',profileFound:null,isEEB:false,userCanEdit:false,userRoleDesc:'VISUALIZADOR',userOwnRoom:'',
   studentsByRoom:{},historyList:[],reviewQueueList:[],myReportsList:[],pendingReviewCount:0,
   bonificacoesList:[],falseReportsList:[],authorizedUsers:[],roomMapping:fallbackRooms
 };
@@ -43,7 +44,10 @@ function fastRender(){
   renderReviewQueue();
   renderMyReports();
 
-  if(qs('userAuthEmail'))qs('userAuthEmail').textContent=`${appData.userEmail||'Conectando...'} (${appData.userRoleDesc||'VISUALIZADOR'})`;
+  if(qs('userAuthEmail')){
+    const roleLabel=appData.profileFound===false?'PERFIL NÃO CONFIGURADO':(appData.userRoleDesc||'VISUALIZADOR');
+    qs('userAuthEmail').textContent=`${appData.userEmail||'Conectando...'} (${roleLabel})`;
+  }
   if(qs('btnTabEEBManager'))qs('btnTabEEBManager').style.display=appData.isEEB?'inline-flex':'none';
   if(qs('thAcoesEEB'))qs('thAcoesEEB').style.display=appData.isEEB?'table-cell':'none';
   if(qs('boxFormBonificacao'))qs('boxFormBonificacao').style.display=appData.isEEB?'block':'none';
@@ -69,6 +73,10 @@ function fetchLiveBackendData(){
       ['historyList','reviewQueueList','myReportsList','bonificacoesList','falseReportsList','authorizedUsers'].forEach(k=>d[k]=Array.isArray(d[k])?d[k]:[]);
       d.studentsByRoom=d.studentsByRoom||{};d.roomMapping=d.roomMapping||fallbackRooms;
       appData=d;fastRender();
+      if(appData.profileFound===false&&appData.userEmail&&!profileWarningShown){
+        profileWarningShown=true;
+        showToast('Perfil não configurado','Seu e-mail não foi encontrado na aba Permissoes. Cadastre-o para liberar a visão correta.','warning');
+      }
     })
     .withFailureHandler(e=>{
       if(qs('syncBar'))qs('syncBar').style.display='none';
