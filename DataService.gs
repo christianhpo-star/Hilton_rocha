@@ -40,6 +40,7 @@ function getAppData() {
     if (!studentsByRoom[t]) studentsByRoom[t] = [];
     studentsByRoom[t].push({ num: num, nome: nomeExib, nome_completo: nomeComp });
   }
+  var studentsForClient = currentProfile.canEdit ? studentsByRoom : {};
 
   // Apenas ocorrências oficialmente aprovadas entram nesta lista e no ranking.
   var histData = lerDadosWeb_(schema.shHist);
@@ -94,6 +95,19 @@ function getAppData() {
       obs: bonifData[b][8]
     });
   }
+  var bonificacoesForClient = currentProfile.isEEB
+    ? bonificacoesList
+    : bonificacoesList.map(function(item) {
+        return {
+          id: item.id,
+          timestamp: item.timestamp,
+          roomCode: item.roomCode,
+          studentOrRoom: item.studentOrRoom,
+          category: item.category,
+          points: item.points,
+          obs: item.obs
+        };
+      });
 
   var falseData = lerDadosWeb_(schema.shFalse);
   var falseReportsList = [];
@@ -155,12 +169,12 @@ function getAppData() {
     userCanEdit: currentProfile.canEdit,
     userRoleDesc: currentProfile.role,
     userOwnRoom: currentProfile.ownRoom,
-    studentsByRoom: studentsByRoom,
+    studentsByRoom: studentsForClient,
     historyList: historyListForClient,
     reviewQueueList: reviewQueueList,
     myReportsList: myReportsList,
     pendingReviewCount: pendingReviewCount,
-    bonificacoesList: bonificacoesList,
+    bonificacoesList: bonificacoesForClient,
     falseReportsList: falseReportsForClient,
     falseReportPenaltyPoints: FALSE_REPORT_PENALTY_POINTS,
     reportStatuses: {
