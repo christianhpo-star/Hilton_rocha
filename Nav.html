@@ -1,0 +1,20 @@
+<nav class="top-navbar">
+  <div class="brand-container">
+    <div aria-hidden="true" style="width:44px;height:44px;border-radius:8px;background:#fff;color:#1e293b;display:flex;align-items:center;justify-content:center;font-size:1.3rem;"><i class="fa-solid fa-school"></i></div>
+    <div class="brand-titles">
+      <h1>EE PROFESSOR HILTON ROCHA</h1>
+      <p>Nossa Turma, Nosso Compromisso — Gestão & Representantes</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="user-auth-info" id="userAuthTag"><i class="fa-solid fa-circle-user" style="color:var(--green-accent);"></i><span id="userAuthEmail">Carregando...</span></div>
+    <div class="nav-actions">
+      <button class="btn-tab active" onclick="switchTab('tab-registrar')"><i class="fa-solid fa-pen-to-square"></i> Novo Registro</button>
+      <button class="btn-tab" onclick="switchTab('tab-ranking')"><i class="fa-solid fa-trophy"></i> Ranking & Pontuação</button>
+      <button class="btn-tab" id="btnTabBonificacoes" onclick="switchTab('tab-bonificacoes')"><i class="fa-solid fa-star"></i> Reconhecimento & Bônus</button>
+      <button class="btn-tab" onclick="switchTab('tab-historico')"><i class="fa-solid fa-list-check"></i> Histórico</button>
+      <button class="btn-tab rules-tab" onclick="switchTab('tab-regulamento')"><i class="fa-solid fa-book-open"></i> Regulamento</button>
+      <button class="btn-tab eeb-only" id="btnTabEEBManager" onclick="switchTab('tab-eeb-manager')" style="display:none;"><i class="fa-solid fa-user-gear"></i> Gestão EEB</button>
+    </div>
+  </div>
+</nav>
