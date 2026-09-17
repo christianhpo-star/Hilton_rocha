@@ -1,72 +1,76 @@
-# 03 — Auditoria das turmas técnicas
+# 03 — Auditoria das turmas técnicas de 2º ano
 
 Data da revisão: 17/09/2026.
 
 ## Problema investigado
 
-Foi observado saldo de **-110 aulas** no 2º ano de Sistemas de Energia Renovável. A auditoria reproduziu o cálculo e separou duas perguntas que não podem ser confundidas:
+Foi observado saldo de aproximadamente **-110 aulas** no 2º ano de Sistemas de Energia Renovável. A auditoria separou duas questões:
 
-1. o cenário matemático de 6 A/S + 6 A/S reproduz o saldo? **Sim**;
-2. a matriz específica TFE/SENAI 2025 já foi localizada para provar que esses dois componentes têm 6 A/S cada? **Não**.
+1. a hipótese de 6 A/S em SER III + 6 A/S em SER IV reproduz o valor? **Sim**;
+2. existe fonte oficial localizada que prove 6 A/S para cada um desses dois componentes na turma atual? **Não**.
 
-## Reprodução do saldo
+Por isso a hipótese 6+6 foi retirada do cálculo automático. Isso não significa que a anomalia do 1º trimestre tenha desaparecido.
 
-Se `Sistemas de Energia Renovável III` e `IV` tiverem 6 A/S cada:
+## Controle global sem inventar a divisão técnica
 
-- 1º trimestre: referência 79 + 79 = 158; registrado = 62; saldo = **-96**;
-- 2º trimestre: referência 82 + 82 = 164; registrado = 150; saldo = **-14**;
-- consolidado: **-110**.
+A jornada total do EMTI permite um controle de integridade de **45 A/S** sem decidir quantas aulas pertencem a III ou IV.
 
-Portanto, -110 é um **cenário reproduzível**, mas não pode ser apresentado como déficit curricular confirmado enquanto faltar a matriz específica ou o horário homologado.
-
-## Evidência que impede descartar o cenário 6+6
-
-O 2º ano de Fabricação Mecânica registrou **162 aulas técnicas no 1º trimestre e 168 no 2º trimestre**. Esses volumes são compatíveis com uma carga técnica total próxima de 12 A/S. Por isso, também seria incorreto concluir que a hipótese 6+6 é falsa apenas porque o documento específico ainda não foi recuperado.
-
-Classificação adotada: **não confirmado e não descartado**.
-
-## Busca documental executada
-
-Foram pesquisados os arquivos acessíveis no Google Drive por:
-
-- `Matrizes Curriculares EMTI Profissional Trilhas SENAI 2025`;
-- `Fabricação Mecânica`;
-- `Sistemas de Energia Renovável`;
-- `Sistemas de Energia Renovável III`;
-- planos de ensino SENAI relacionados.
-
-Foi localizado material SENAI de outros cursos e foi confirmada a existência, nos documentos da SRE, de matriz própria para o Trilhas/SENAI, mas **não foi recuperado um arquivo inequivocamente correspondente à matriz 2025 de Fabricação Mecânica e Sistemas de Energia Renovável**. O painel não preencherá essa lacuna por inferência.
-
-## Controle global
-
-A jornada EMTI de 45 A/S fica como controle de integridade, sem distribuir automaticamente o saldo por componente:
-
-| Turma | 1º tri registrado | Ref. global 45×66/5 | Dif. | 2º tri registrado | Ref. global 45×68/5 | Dif. |
+| Turma | T1 registrado | Ref. global T1 (45×66/5) | Dif. | T2 registrado | Ref. global T2 (45×68/5) | Dif. |
 |---|---:|---:|---:|---:|---:|---:|
 | 2º Sistemas de Energia Renovável | 481 | 594 | **-113** | 606 | 612 | -6 |
 | 2º Fabricação Mecânica | 574 | 594 | -20 | 606 | 612 | -6 |
 
-O achado mais forte permanece no **1º trimestre do 2º Sistemas de Energia Renovável**: há desvio global de -113 em relação à jornada proporcional de 45 A/S. Isso exige investigar início/organização das aulas técnicas, instrutores, calendário específico e lançamentos, mas não identifica sozinho qual componente está incorreto.
+O ponto importante é que o T1 do 2º SER apresenta **-113 no total da turma**, número muito próximo do saldo de ~110 que motivou a investigação, agora sem depender da hipótese 6+6.
 
-## Regra corrigida no painel
+## Localização da diferença dentro dos dados
 
-Para os 2º anos de Fabricação Mecânica e Sistemas de Energia Renovável:
+A própria planilha permite separar os dois componentes técnicos agregados dos demais componentes:
 
-1. nenhuma carga técnica por componente é inferida por analogia;
-2. a nova matriz 2026 não é aplicada automaticamente ao 2º ano;
-3. a previsão por componente fica `sem referência` até matriz TFE/SENAI 2025 ou horário homologado;
-4. o cenário -110 permanece visível somente como **hipótese de auditoria**;
-5. o cenário -110 não entra nos alertas automáticos oficiais.
+| Recorte | 2º SER | 2º Fabricação | SER − Fabricação |
+|---|---:|---:|---:|
+| T1 — técnico III + IV | 62 | 162 | **-100** |
+| T1 — demais componentes | 419 | 412 | **+7** |
+| T2 — técnico III + IV | 150 | 168 | -18 |
+| T2 — demais componentes | 456 | 438 | +18 |
 
-## Consolidação de docentes
+### Leitura
 
-No consolidado 1º + 2º trimestre:
+No 1º trimestre, os componentes não técnicos das duas turmas são praticamente equivalentes: 419 no SER e 412 na Fabricação. Já o bloco técnico do SER tem 62 registros, contra 162 na Fabricação.
 
-- turma + componente representa um único diário lógico;
-- se o professor mudou entre trimestres, as aulas são acumuladas e o responsável exibido é o atual do 2º trimestre;
-- duplicidades idênticas no mesmo trimestre não são somadas duas vezes;
-- dois nomes simultâneos no relatório atual permanecem `A confirmar` até validação da escola.
+A diferença comparativa de **100 aulas está concentrada no bloco técnico**. Isso é evidência forte de que a investigação deve se concentrar no início, cronograma ou lançamento das aulas técnicas de Sistemas de Energia Renovável.
 
-## Pendência documental
+## O que ainda não pode ser afirmado
 
-Permanece necessária a **matriz específica 2025 do Trilhas de Futuro nas Escolas/SENAI** para Fabricação Mecânica e Sistemas de Energia Renovável, ou o horário homologado dos 2º anos. Até esse gate ser cumprido, qualquer déficit por componente técnico seria uma conclusão sem base documental suficiente.
+Os dados acima **não provam** que faltaram exatamente 100, 110 ou 113 aulas ministradas. Eles provam uma diferença de registros e localizam onde ela aparece.
+
+Para concluir a quantidade normativa por componente, falta uma destas fontes:
+
+1. plano/matriz de execução SENAI/TFE da coorte 2025-2027;
+2. horário homologado do 2º SER no T1/T2;
+3. cronograma do SENAI com data de início e carga dos blocos III/IV.
+
+## Hipóteses operacionais que devem ser conferidas
+
+- início técnico posterior ao início do trimestre;
+- diferença de cronograma entre Fabricação e SER;
+- aula prática em calendário específico do SENAI;
+- lançamento incompleto no DED no T1;
+- regularização posterior no T2.
+
+Essas hipóteses são perguntas de auditoria, não conclusões.
+
+## Evidência do 2º trimestre
+
+No T2, ambas as turmas totalizam **606 aulas**, muito próximas da referência global proporcional de 612. Isso reforça a necessidade de investigar especificamente o histórico do T1 do SER, e não classificar toda a oferta técnica como estruturalmente subdimensionada.
+
+## Regra implementada no painel
+
+1. nenhuma carga técnica de III/IV é inferida por analogia;
+2. o antigo `-110` não aparece como déficit curricular confirmado;
+3. a anomalia global do T1 continua visível;
+4. o painel mostra a decomposição técnico x demais componentes;
+5. o cálculo por componente técnico só será habilitado após fonte específica.
+
+## Docentes
+
+A consolidação continua usando um único diário lógico por turma + componente. Troca de professor entre T1 e T2 preserva as aulas de ambos os períodos, mas o responsável exibido é o docente atual do T2. Duplicidades simultâneas no relatório atual não são somadas duas vezes e ficam `A confirmar` quando a escola precisa escolher o responsável.
