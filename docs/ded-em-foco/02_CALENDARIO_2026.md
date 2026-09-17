@@ -6,17 +6,18 @@ Data da revisão: 17/09/2026.
 
 Calendário Escolar SEE/MG 2026 — Organização Anual, arquivo fornecido para a auditoria.
 
-Períodos:
+Períodos oficiais do modelo:
 
-- 1º trimestre: 04/02/2026 a 20/05/2026;
-- 2º trimestre: 21/05/2026 a 09/09/2026;
-- 3º trimestre: 10/09/2026 a 18/12/2026.
+- 1º trimestre: 04/02/2026 a 20/05/2026 — **66 dias**;
+- 2º trimestre: 21/05/2026 a 09/09/2026 — **68 dias**;
+- 3º trimestre: 10/09/2026 a 18/12/2026 — **66 dias-alvo**;
+- total anual: **200 dias**.
 
-O modelo estadual totaliza 200 dias letivos e marca sábados letivos em 27/06 e 12/09.
+O modelo contém os sábados letivos de **27/06** e **12/09**, que permanecem contabilizados.
 
-## Contagem do modelo enviado
+## Contagem mensal do PDF enviado
 
-- fevereiro: 13 dias letivos;
+- fevereiro: 13;
 - março: 22;
 - abril: 18;
 - maio: 20;
@@ -28,51 +29,48 @@ O modelo estadual totaliza 200 dias letivos e marca sábados letivos em 27/06 e 
 - novembro: 19;
 - dezembro: 14.
 
-Total: 200.
+Total do modelo estadual: 200.
 
-Por trimestre:
+## Adaptação obrigatória a Belo Horizonte
 
-- 1º trimestre: 66 dias;
-- 2º trimestre: 68 dias;
-- 3º trimestre: 66 dias.
+A EE Professor Hílton Rocha está em Belo Horizonte. O calendário estadual genérico não marca todos os feriados municipais. Na conferência local:
 
-## Conferência local — Belo Horizonte
+- 03/04 — Sexta-feira da Paixão: já fora dos dias letivos do modelo;
+- 04/06 — Corpus Christi: já fora dos dias letivos do modelo;
+- 15/08 — Assunção de Nossa Senhora: cai em sábado em 2026;
+- **08/12 — Imaculada Conceição: feriado municipal e aparece como dia comum no modelo estadual fornecido.**
 
-A conferência foi feita contra fontes externas oficiais/administrativas além do PDF estadual:
+## Correção conceitual
 
-- calendário de feriados e pontos facultativos 2026 da Prefeitura de Belo Horizonte;
-- Comunicado da Secretaria de Estado de Governo de Minas Gerais, publicado em 02/12/2025, com os feriados/pontos facultativos de 2026;
-- TRT-MG, relação de feriados locais 2026, que identifica 08/12 em Belo Horizonte como Dia da Imaculada Conceição (Lei nº 1.327/1967).
+Não é correto dizer que a obrigação anual da escola passou a 199 dias.
 
-Resultado:
+O correto é:
 
-- 03/04 — Sexta-feira Santa: já não é dia letivo no modelo;
-- 04/06 — Corpus Christi: já não é dia letivo no modelo;
-- 15/08 — feriado municipal em Belo Horizonte, mas em 2026 cai em sábado;
-- **08/12 — Imaculada Conceição: feriado municipal em Belo Horizonte e cai em terça-feira; o modelo estadual fornecido conta essa data como dia letivo.**
-
-Logo, sem registrar a recomposição homologada da escola, existem **199 dias localmente confirmados**:
-
-- T1: 66;
-- T2: 68;
-- T3: 65.
+- **alvo legal: 200 dias**;
+- antes de informar a reposição, existem **199 datas letivas localizadas**;
+- no 3º trimestre existem 65 datas localizadas + 1 dia letivo ainda sem data de recomposição identificada;
+- após informar a data efetivamente aprovada/homologada, o calendário volta a localizar os 200 dias.
 
 ## Recomposição
 
-A Resolução do calendário estadual exige a organização anual com 200 dias. Portanto, a escola precisa ter uma recomposição para o dia localmente excluído. O painel **não inventa a data**: ela deve ser informada conforme o calendário efetivamente aprovado/homologado da escola.
+O painel não inventa uma data para substituir 08/12. A data deve vir do calendário efetivamente aprovado pela escola/Colegiado e homologado pela Inspeção Escolar.
 
-Quando a data for cadastrada, ela entra no 3º trimestre e também no monitoramento semanal.
+A interface permite registrar essa data. Depois disso:
 
-## Uso no cálculo de aulas
+1. ela entra na contagem efetiva do 3º trimestre;
+2. o painel passa de 65/66 para 66/66;
+3. o acompanhamento semanal passa a considerar a recomposição quando a data já tiver transcorrido.
 
-A referência proporcional continua sendo:
+## Uso no cálculo
 
-`aulas semanais × dias letivos efetivos ÷ 5`
+Para trimestres concluídos, a referência proporcional é:
 
-Mas isso não substitui o horário semanal real. Para precisão máxima por componente, a ordem de preferência é:
+`A/S da matriz × dias letivos do período ÷ 5`
 
-1. horário homologado e calendário local/recomposição;
-2. carga semanal confirmada da matriz aplicável;
-3. referência proporcional pelo número de dias letivos.
+Para o acompanhamento semanal do 3º trimestre, o sistema usa apenas as **datas efetivamente ocorridas até a data do relatório**, incluindo sábados letivos e a reposição cadastrada.
 
-Assim, um feriado ou uma reposição não é distribuído artificialmente entre todas as disciplinas como se todas ocorressem nos mesmos dias da semana.
+A proporcionalidade é uma referência de conferência. A contagem exata de um componente depende do horário semanal real, pois feriados e reposições não afetam igualmente todas as disciplinas.
+
+## Gate restante
+
+Confirmar no calendário homologado da EE Professor Hílton Rocha qual data recompôs 08/12. Até lá, o painel mostra a pendência sem reduzir a meta legal de 200 dias.
