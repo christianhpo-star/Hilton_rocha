@@ -2,8 +2,7 @@ function getAppData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('Abra este projeto por Extensões > Apps Script na planilha de referência.');
 
-  ensureOperationalSchema_();
-
+  var schema = ensureOperationalSchema_();
   var userEmail = getUserEmail();
   var shPerm = ss.getSheetByName('Permissoes');
   var permData = lerDadosWeb_(shPerm);
@@ -56,8 +55,8 @@ function getAppData() {
     studentsByRoom[t].push({ num: num, nome: nomeExib, nome_completo: nomeComp });
   }
 
-  var shHist = ss.getSheetByName('Historico_Ocorrencias');
-  var histData = lerDadosWeb_(shHist);
+  // Apenas ocorrências oficialmente aprovadas entram nesta lista e no ranking.
+  var histData = lerDadosWeb_(schema.shHist);
   var historyList = [];
   for (var k = histData.length - 1; k >= 1; k--) {
     if (!histData[k][0] || !histData[k][2]) continue;
@@ -94,8 +93,7 @@ function getAppData() {
     });
   }
 
-  var shFalse = ss.getSheetByName('Historico_Denuncias_Falsas');
-  var falseData = lerDadosWeb_(shFalse);
+  var falseData = lerDadosWeb_(schema.shFalse);
   var falseReportsList = [];
   for (var f = falseData.length - 1; f >= 1; f--) {
     if (!falseData[f][0]) continue;
@@ -115,12 +113,32 @@ function getAppData() {
     });
   }
 
+  var queueData = lerDadosWeb_(schema.shQueue);
+  var allReports = [];
+  for (var q = queueData.length - 1; q >= 1; q--) {
+    if (!queueData[q][0]) continue;
+    allReports.push(filaDenunciaToObject_(queueData[q]));
+  }
+
+  var reviewQueueList = currentProfile.isEEB ? allReports : [];
+  var myReportsList = allReports.filter(function(item) {
+    return item.reporterEmail === userEmail;
+  }).slice(0, 20);
+
+  var pendingReviewCount = 0;
+  if (currentProfile.isEEB) {
+    for (var p = 0; p < allReports.length; p++) {
+      if (allReports[p].status === REPORT_STATUS_PENDING) pendingReviewCount++;
+    }
+  }
+
   var falseReportsForClient = currentProfile.isEEB
     ? falseReportsList
     : falseReportsList.map(function(item) {
         return {
           id: item.id,
           timestamp: item.timestamp,
+          originalTimestamp: item.originalTimestamp,
           reporterRoom: item.reporterRoom,
           penaltyPoints: item.penaltyPoints
         };
@@ -134,10 +152,26 @@ function getAppData() {
     userOwnRoom: currentProfile.ownRoom,
     studentsByRoom: studentsByRoom,
     historyList: historyList,
+    reviewQueueList: reviewQueueList,
+    myReportsList: myReportsList,
+    pendingReviewCount: pendingReviewCount,
     bonificacoesList: bonificacoesList,
     falseReportsList: falseReportsForClient,
     falseReportPenaltyPoints: FALSE_REPORT_PENALTY_POINTS,
-    authorizedUsers: authorizedUsers,
-    roomMapping: {"1º SIST_ENERGIA": "1º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1", "1º FAB_MECÂNICA": "1º FABRICAÇÃO MECÂNICA EM INT 1", "2º SIST_ENERGIA": "2º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1", "2º FAB_MECÂNICA": "2º FABRICAÇÃO MECÂNICA EM INT 1", "3º INFORMÁTICA": "3º INFORMÁTICA EM INT 1", "3º SEG_TRABALHO": "3º SEGURANÇA DO TRABALHO EM INT 1"}
+    reportStatuses: {
+      pending: REPORT_STATUS_PENDING,
+      approved: REPORT_STATUS_APPROVED,
+      denied: REPORT_STATUS_DENIED,
+      falseReport: REPORT_STATUS_FALSE
+    },
+    authorizedUsers: currentProfile.isEEB ? authorizedUsers : [],
+    roomMapping: {
+      '1º SIST_ENERGIA': '1º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1',
+      '1º FAB_MECÂNICA': '1º FABRICAÇÃO MECÂNICA EM INT 1',
+      '2º SIST_ENERGIA': '2º SISTEMAS DE ENERGIA RENOVÁVEL EM INT 1',
+      '2º FAB_MECÂNICA': '2º FABRICAÇÃO MECÂNICA EM INT 1',
+      '3º INFORMÁTICA': '3º INFORMÁTICA EM INT 1',
+      '3º SEG_TRABALHO': '3º SEGURANÇA DO TRABALHO EM INT 1'
+    }
   };
 }
