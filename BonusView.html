@@ -1,16 +1,42 @@
 <div id="tab-bonificacoes" class="tab-content">
+  <style>
+    .bonus-policy-banner{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:16px;margin-bottom:18px;background:rgba(59,130,246,.08);border:1px solid rgba(96,165,250,.18)}
+    .bonus-policy-banner>i{font-size:1.25rem;color:#60a5fa;margin-top:2px}.bonus-policy-banner strong{display:block;margin-bottom:4px}.bonus-policy-banner p{margin:0;color:var(--text-sub);font-size:.86rem;line-height:1.5}
+    .bonus-value-card{min-height:48px;border:1px solid rgba(148,163,184,.18);border-radius:12px;padding:8px 12px;background:rgba(15,23,42,.38);display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .bonus-value-card span{color:var(--text-sub);font-size:.78rem}.bonus-value-card strong{font-size:1.25rem;color:#fbbf24;white-space:nowrap}
+    .bonus-category-help{margin:10px 0 0;color:var(--text-sub);font-size:.8rem;line-height:1.45;min-height:1.2em}
+    .bonus-limit-chip{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 9px;border-radius:999px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.18);color:#fbbf24;font-size:.75rem;font-weight:700}
+  </style>
+
   <div class="glass-card" id="boxFormBonificacao" style="display:none;">
-    <div class="card-title"><div><i class="fa-solid fa-award"></i> Reconhecimento Pedagógico & Bônus</div><span class="subtle-copy">Lançamento exclusivo da EEB/Gestão</span></div>
+    <div class="card-title"><div><i class="fa-solid fa-award"></i> Reconhecimento Pedagógico</div><span class="subtle-copy">Lançamento exclusivo da EEB/Gestão</span></div>
+
+    <div class="bonus-policy-banner">
+      <i class="fa-solid fa-scale-balanced"></i>
+      <div>
+        <strong>Reconhecer sem desequilibrar a competição</strong>
+        <p>Os reconhecimentos valem +1, +2 ou +3 conforme o impacto da ação. Cada turma pode somar no máximo <strong>+6 pontos por mês</strong>. Ao atingir o teto, novas boas ações continuam aparecendo no mural, mas não aumentam mais o ranking naquele mês.</p>
+      </div>
+    </div>
+
     <form onsubmit="handleSalvarBonificacao(event)">
       <div class="form-grid-two">
         <select id="bonifTurma" class="custom-select" onchange="populateBonifStudents()"><option value="">Selecione a turma</option></select>
         <select id="bonifAlcance" class="custom-select"><option>Toda a Turma (Reconhecimento Coletivo)</option></select>
-        <input id="bonifCategoria" class="custom-input" placeholder="Categoria do reconhecimento" required>
-        <input id="bonifPontos" class="custom-input" type="number" min="1" value="10" required>
+        <select id="bonifCategoria" class="custom-select" onchange="updateBonusPolicyPreview()" required>
+          <option value="">Selecione a categoria positiva</option>
+        </select>
+        <div class="bonus-value-card"><span>Pontuação padrão desta categoria</span><strong id="bonifPontosPreview">—</strong></div>
       </div>
-      <input id="bonifObs" class="custom-input" style="margin-top:12px;" placeholder="Justificativa pedagógica">
-      <button id="btnSubmitBonif" class="btn-submit-occ" type="submit" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#1c1917;"><i class="fa-solid fa-star"></i> CONCEDER BÔNUS</button>
+      <p id="bonifCategoriaDescricao" class="bonus-category-help">Selecione uma categoria para ver o objetivo pedagógico e a pontuação correspondente.</p>
+      <span class="bonus-limit-chip"><i class="fa-solid fa-gauge-high"></i> Teto mensal por turma: <span id="bonifMonthlyCap">+6</span></span>
+      <input id="bonifObs" class="custom-input" style="margin-top:12px;" placeholder="Justificativa pedagógica — descreva o que aconteceu">
+      <button id="btnSubmitBonif" class="btn-submit-occ" type="submit" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#1c1917;"><i class="fa-solid fa-star"></i> REGISTRAR RECONHECIMENTO</button>
     </form>
   </div>
-  <div class="glass-card"><div class="card-title"><div><i class="fa-solid fa-star"></i> Mural de reconhecimentos</div></div><div id="muralBonificacoesContainer" style="display:grid;gap:12px;"></div></div>
+
+  <div class="glass-card">
+    <div class="card-title"><div><i class="fa-solid fa-star"></i> Mural de reconhecimentos</div><span class="subtle-copy">Boas ações continuam visíveis mesmo após o teto mensal</span></div>
+    <div id="muralBonificacoesContainer" style="display:grid;gap:12px;"></div>
+  </div>
 </div>
