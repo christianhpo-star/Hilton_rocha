@@ -1,0 +1,11 @@
+# Por seguranca, somente fontes Apps Script e o manifesto entram no push local.
+**/**
+!appsscript.json
+!*.gs
+!*.html
+
+# Nunca enviar metadados, automacoes ou documentacao para o Apps Script.
+.github/**
+scripts/**
+README.md
+APPS_SCRIPT_SYNC.md
