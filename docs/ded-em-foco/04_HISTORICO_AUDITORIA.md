@@ -62,13 +62,13 @@ A versão local foi testada em Chromium/Playwright:
 
 O HTML preenchido não é publicado neste repositório porque o repositório é público e o arquivo contém dados internos/nomes de docentes.
 
-## Passo 8 — cruzar evidência contemporânea do fechamento
+## Passo 8 — cruzar evidências operacionais de fechamento
 
-Foi localizado relatório de visita pedagógica de 26/05/2026. O documento registra que ainda havia **duas turmas pendentes no DED+ por questões com o SENAI e troca de professores**, em processo de regularização.
+Relatório de 26/05/2026 registra que ainda havia **duas turmas pendentes no DED+ por questões com o SENAI e troca de professores**, em processo de regularização. O documento não identifica quais eram as duas turmas, portanto a auditoria não atribui automaticamente essa pendência ao 2º SER.
 
-A evidência é temporalmente coerente com a anomalia do T1, mas o relatório não identifica quais eram as duas turmas. Portanto, não se atribui automaticamente essa pendência ao 2º SER.
+Relatório da manhã de 17/09/2026, após o encerramento do 2º trimestre, registra expressamente que o **fechamento dos diários no DED+ ocorreu sem intercorrências administrativas ou operacionais** e que as bases estavam consolidadas para a Reunião N1 da SMAR.
 
-A versão local do painel passou a mostrar essa evidência com a ressalva acima e foi novamente testada: 171 registros / 24 docentes / 9 turmas, zero erros JavaScript.
+Esse contraste é coerente com os dados: no T1 o 2º SER apresenta -113 na referência global, enquanto no T2 tanto SER quanto Fabricação registram 606 frente a 612 na referência global (-6). A versão local do painel passou a mostrar esse contexto e foi novamente testada com zero erros JavaScript.
 
 ## Branch e PR
 
@@ -92,7 +92,8 @@ Refinamento:
 - `75bff13` — localiza diferença de 100 aulas no bloco técnico do 2º SER;
 - `c91bfd9` — consolida histórico e testes;
 - `3b8e609` — registra regressão Chromium/Playwright;
-- `a5e473d` — registra evidência operacional de pendências SENAI no fechamento do T1.
+- `a5e473d` — registra evidência operacional de pendências SENAI no fechamento do T1;
+- `3139159` — cruza a pendência do T1 com o fechamento regular do T2.
 
 ## Gates antes de concluir o PR
 
@@ -100,6 +101,6 @@ Refinamento:
 - [ ] confirmar data homologada da recomposição de 08/12;
 - [x] executar validação sintática;
 - [x] executar regressão em navegador;
-- [x] cruzar evidência contemporânea de fechamento;
+- [x] cruzar evidências contemporâneas de T1 e T2;
 - [x] manter dados nominais fora do repositório público;
 - [ ] revisar novamente o PR depois das duas pendências documentais.
