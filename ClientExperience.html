@@ -1,0 +1,83 @@
+const ROOM_IDENTITIES={
+  '1º SIST_ENERGIA':{icon:'fa-solar-panel',emoji:'⚡',accent:'#3b82f6',soft:'rgba(59,130,246,.16)',label:'Energia'},
+  '1º FAB_MECÂNICA':{icon:'fa-gears',emoji:'⚙️',accent:'#f97316',soft:'rgba(249,115,22,.14)',label:'Mecânica'},
+  '2º SIST_ENERGIA':{icon:'fa-battery-full',emoji:'🔋',accent:'#06b6d4',soft:'rgba(6,182,212,.14)',label:'Energia'},
+  '2º FAB_MECÂNICA':{icon:'fa-screwdriver-wrench',emoji:'🛠️',accent:'#8b5cf6',soft:'rgba(139,92,246,.15)',label:'Mecânica'},
+  '3º INFORMÁTICA':{icon:'fa-laptop-code',emoji:'💻',accent:'#10b981',soft:'rgba(16,185,129,.14)',label:'Informática'},
+  '3º SEG_TRABALHO':{icon:'fa-helmet-safety',emoji:'🦺',accent:'#eab308',soft:'rgba(234,179,8,.14)',label:'Segurança'}
+};
+function roomIdentity(code){return ROOM_IDENTITIES[code]||{icon:'fa-users',emoji:'🎓',accent:'#3b82f6',soft:'rgba(59,130,246,.14)',label:'Turma'}}
+function applyRoomTheme(el,code){if(!el)return;const id=roomIdentity(code);el.style.setProperty('--room-accent',id.accent);el.style.setProperty('--room-soft',id.soft)}
+function experienceMonthOk(timestamp){return activeRankingMonth==='ALL'||String(timestamp||'').split('/')[1]?.trim()===activeRankingMonth}
+function buildExperienceScores(){
+  const rooms={};roomCodes().forEach(c=>rooms[c]={uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0});
+  (appData.historyList||[]).forEach(i=>{if(!rooms[i.roomCode]||!experienceMonthOk(i.timestamp))return;const r=String(i.rule||'').toLowerCase();if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);else if(r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1)});
+  (appData.bonificacoesList||[]).forEach(b=>{if(rooms[b.roomCode]&&experienceMonthOk(b.timestamp))rooms[b.roomCode].bonus+=Number(b.points)||0});
+  (appData.falseReportsList||[]).forEach(f=>{const d=f.originalTimestamp||f.timestamp;if(f.reporterRoom&&rooms[f.reporterRoom]&&experienceMonthOk(d))rooms[f.reporterRoom].falsePenalty+=Number(f.penaltyPoints)||0});
+  Object.values(rooms).forEach(s=>s.total=s.uniforme+s.sapato+s.entrada+s.sala+s.bonus-s.falsePenalty);
+  return rooms;
+}
+function getExperienceRanking(){const rooms=buildExperienceScores();return Object.entries(rooms).sort((a,b)=>b[1].total-a[1].total)}
+function currentExperienceRoom(ranking){const own=String(appData.userOwnRoom||'').trim();if(own&&own!=='TODAS'&&ranking.some(([c])=>c===own))return own;return ranking[0]?.[0]||roomCodes()[0]||''}
+function parseBrTimestamp(value){const m=String(value||'').match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);if(!m)return 0;return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0)).getTime()}
+function shortTimestamp(value){const s=String(value||'');return s.length>=16?s.slice(0,16):s}
+
+function renderHomeExperience(){
+  const root=qs('tab-home');if(!root)return;
+  const ranking=getExperienceRanking();const code=currentExperienceRoom(ranking);const pos=Math.max(0,ranking.findIndex(([c])=>c===code));const score=ranking[pos]?.[1]||{uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0,total:100};const id=roomIdentity(code);applyRoomTheme(qs('homeHero'),code);
+  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML=`<i class="fa-solid ${id.icon}"></i>`;
+  if(appData.isEEB){
+    if(qs('homeEyebrow'))qs('homeEyebrow').textContent='VISÃO GERAL DA ESCOLA';
+    if(qs('homeTitle'))qs('homeTitle').textContent='Acompanhe a competição';
+    if(qs('homeSubtitle'))qs('homeSubtitle').textContent='Resumo da classificação e das movimentações mais recentes.';
+  }else{
+    if(qs('homeEyebrow'))qs('homeEyebrow').textContent='MINHA TURMA';
+    if(qs('homeTitle'))qs('homeTitle').textContent=code||'Acompanhe sua turma';
+    if(qs('homeSubtitle'))qs('homeSubtitle').textContent=(appData.roomMapping||{})[code]||'Pontuação, posição e novidades em um só lugar.';
+  }
+  if(qs('homeRank'))qs('homeRank').textContent=ranking.length?`${pos+1}º`:'—';
+  if(qs('homeRankHint'))qs('homeRankHint').textContent=pos===0?'Liderança atual':`entre ${ranking.length} turmas`;
+  if(qs('homeScore'))qs('homeScore').textContent=Number(score.total)||0;
+  if(qs('homeScoreHint'))qs('homeScoreHint').textContent=score.bonus?`inclui +${score.bonus} de bônus`:'pontuação atual';
+  const ahead=pos>0?ranking[pos-1][1].total:null;const gap=ahead===null?0:Math.max(0,ahead-score.total);
+  if(qs('homeGap'))qs('homeGap').textContent=pos===0?'—':`${gap} pt${gap===1?'':'s'}`;
+  if(qs('homeGapHint'))qs('homeGapHint').textContent=pos===0?'Sua referência é manter a liderança':`para alcançar o ${pos}º lugar`;
+  const myPending=(appData.myReportsList||[]).filter(r=>String(r.status||'').toUpperCase()==='PENDENTE').length;
+  if(qs('homeMyPending'))qs('homeMyPending').textContent=myPending;
+  if(qs('homeRoomBadge')){qs('homeRoomBadge').innerHTML=`${id.emoji} ${esc(code||'Turma')}`;applyRoomTheme(qs('homeRoomBadge'),code)}
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML=`<h3>${esc((appData.roomMapping||{})[code]||code||'Visão geral')}</h3><p>${pos===0?'Está na liderança neste recorte.':`Está em ${pos+1}º lugar com ${score.total} pontos.`}${score.bonus?` Recebeu +${score.bonus} pontos em reconhecimentos.`:''}${score.falsePenalty?` Possui -${score.falsePenalty} ponto(s) por denúncia falsa.`:''}</p>`;
+  if(qs('homeProgressFill'))qs('homeProgressFill').style.width=`${Math.max(0,Math.min(100,score.total))}%`;
+  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML=`<span>Uniforme ${score.uniforme}/40</span><span>Sapato ${score.sapato}/30</span><span>Entrada ${score.entrada}/20</span><span>Sala ${score.sala}/10</span>`;
+  const mine=appData.myReportsList||[];const counts={PENDENTE:0,APROVADA:0,NEGADA:0,FALSA:0};mine.forEach(r=>{const s=String(r.status||'').toUpperCase();if(counts[s]!==undefined)counts[s]++});
+  if(qs('homeReportSummary'))qs('homeReportSummary').innerHTML=`<div class="home-report-mini"><strong>${counts.PENDENTE}</strong><span>Pendentes</span></div><div class="home-report-mini"><strong>${counts.APROVADA}</strong><span>Aprovadas</span></div><div class="home-report-mini"><strong>${counts.NEGADA}</strong><span>Negadas</span></div><div class="home-report-mini"><strong>${counts.FALSA}</strong><span>Falsas</span></div>`;
+}
+function renderActivityFeed(){
+  const root=qs('activityFeed');if(!root)return;const events=[];
+  (appData.historyList||[]).forEach(i=>events.push({time:parseBrTimestamp(i.timestamp),stamp:i.timestamp,type:'approved',icon:'fa-circle-check',title:`${i.roomCode} teve uma ocorrência aprovada`,detail:String(i.rule||'Critério confirmado pela EEB/Gestão.')}));
+  (appData.bonificacoesList||[]).forEach(b=>events.push({time:parseBrTimestamp(b.timestamp),stamp:b.timestamp,type:'bonus',icon:'fa-star',title:`${b.roomCode} recebeu +${Number(b.points)||0} pontos`,detail:String(b.category||'Reconhecimento pedagógico')}));
+  (appData.falseReportsList||[]).forEach(f=>{if(!f.reporterRoom)return;events.push({time:parseBrTimestamp(f.timestamp),stamp:f.timestamp,type:'false',icon:'fa-shield-halved',title:`${f.reporterRoom} recebeu penalidade por denúncia falsa`,detail:`-${Number(f.penaltyPoints)||0} ponto(s) após revisão pedagógica`})});
+  events.sort((a,b)=>b.time-a.time);const list=events.slice(0,8);
+  root.innerHTML=list.map((e,idx)=>`<div class="activity-item ${e.type}" style="animation-delay:${idx*35}ms"><span class="activity-icon"><i class="fa-solid ${e.icon}"></i></span><div class="activity-copy"><strong>${esc(e.title)}</strong><span>${esc(e.detail)}</span></div><span class="activity-time">${esc(shortTimestamp(e.stamp))}</span></div>`).join('')||'<div class="empty-state"><i class="fa-solid fa-sparkles"></i>Ainda não há movimentações oficiais neste período.</div>';
+}
+function decorateRankingCards(){
+  document.querySelectorAll('.ranking-card').forEach(card=>{const roomEl=card.querySelector('.ranking-room');const code=roomEl?.querySelector('strong')?.textContent?.trim();if(!code)return;const id=roomIdentity(code);applyRoomTheme(card,code);if(!card.querySelector('.room-avatar')&&roomEl){const wrap=document.createElement('div');wrap.className='ranking-room-wrap';const avatar=document.createElement('span');avatar.className='room-avatar';avatar.innerHTML=`<i class="fa-solid ${id.icon}"></i>`;roomEl.parentNode.insertBefore(wrap,roomEl);wrap.appendChild(avatar);wrap.appendChild(roomEl)}});
+}
+function syncExperienceNav(tabId){
+  document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.mobileTab===tabId));
+  const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'flex':'none';const count=Number(appData.pendingReviewCount)||0;if(qs('mobilePendingBadge')){qs('mobilePendingBadge').textContent=count;qs('mobilePendingBadge').style.display=count>0?'flex':'none'}
+}
+function showExperienceSkeletons(){
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML='<div class="skeleton-line wide"></div><div class="skeleton-line"></div>';
+  if(qs('activityFeed'))qs('activityFeed').innerHTML='<div class="skeleton-feed"><span></span><div><div class="skeleton-line wide"></div><div class="skeleton-line"></div></div></div><div class="skeleton-feed"><span></span><div><div class="skeleton-line wide"></div><div class="skeleton-line"></div></div></div>';
+}
+
+const _experienceBaseFastRender=fastRender;
+fastRender=function(){_experienceBaseFastRender();renderHomeExperience();renderActivityFeed();decorateRankingCards();syncExperienceNav(document.querySelector('.tab-content.active')?.id||'tab-home')};
+const _experienceBaseSwitchTab=switchTab;
+switchTab=function(id){_experienceBaseSwitchTab(id);syncExperienceNav(id);if(id==='tab-home'){renderHomeExperience();renderActivityFeed()}if(id==='tab-ranking')decorateRankingCards()};
+const _experienceBaseRanking=renderRanking;
+renderRanking=function(){_experienceBaseRanking();decorateRankingCards();renderHomeExperience()};
+if(typeof renderMyReports==='function'){const _experienceBaseMyReports=renderMyReports;renderMyReports=function(){_experienceBaseMyReports();renderHomeExperience()}}
+const _experienceBaseFetch=fetchLiveBackendData;
+fetchLiveBackendData=function(){showExperienceSkeletons();return _experienceBaseFetch()};
+window.addEventListener('load',()=>{syncExperienceNav('tab-home');renderHomeExperience();renderActivityFeed()});
