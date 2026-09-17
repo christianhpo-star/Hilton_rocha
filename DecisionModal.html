@@ -1,0 +1,21 @@
+<div id="decisionModal" class="app-modal-overlay" aria-hidden="true">
+  <div class="app-modal" role="dialog" aria-modal="true" aria-labelledby="decisionModalTitle">
+    <div class="app-modal-head">
+      <div class="modal-icon" id="decisionModalIcon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><span class="eyebrow" id="decisionModalEyebrow">ANÁLISE PEDAGÓGICA</span><h3 id="decisionModalTitle">Revisar denúncia</h3></div>
+      <button type="button" class="modal-close" onclick="closeDecisionModal()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="app-modal-body">
+      <div id="decisionModalReport" class="modal-report-summary"></div>
+      <div id="decisionModalImpact" class="modal-impact-box"></div>
+      <label class="modal-reason-field">
+        <span id="decisionModalReasonLabel">Observação da decisão</span>
+        <textarea id="decisionModalReason" rows="4" placeholder="Registre uma justificativa clara para a decisão."></textarea>
+      </label>
+    </div>
+    <div class="app-modal-actions">
+      <button type="button" class="modal-cancel" onclick="closeDecisionModal()">Cancelar</button>
+      <button type="button" id="decisionModalConfirm" class="modal-confirm" onclick="confirmDecisionModal()"><i class="fa-solid fa-check"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
