@@ -1,9 +1,56 @@
+function jaExisteOcorrenciaOficialNoDia_(shHist, dateKey, roomCode, studentName, rule) {
+  var lastRow = shHist.getLastRow();
+  if (lastRow < 2) return null;
+  var rows = shHist.getRange(2, 1, lastRow - 1, 11).getValues();
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var row = rows[i];
+    if (dataKey_(row[1]) === dateKey &&
+        normalizarComparacao_(row[2]) === normalizarComparacao_(roomCode) &&
+        normalizarComparacao_(row[3]) === normalizarComparacao_(studentName) &&
+        normalizarComparacao_(row[4]) === normalizarComparacao_(rule)) {
+      return { id: row[0], timestamp: String(row[1]) };
+    }
+  }
+  return null;
+}
+
+function jaExisteDenunciaAtivaNoDia_(shQueue, dateKey, roomCode, studentName, rule, requestId) {
+  var lastRow = shQueue.getLastRow();
+  if (lastRow < 2) return null;
+  var rows = shQueue.getRange(2, 1, lastRow - 1, 15).getValues();
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var row = rows[i];
+    var rowRequestId = String(row[9] || '').trim();
+    if (requestId && rowRequestId === requestId) {
+      return {
+        type: 'REQUEST',
+        report: filaDenunciaToObject_(row)
+      };
+    }
+
+    var status = String(row[10] || '').toUpperCase().trim();
+    var blocksDuplicate = status === REPORT_STATUS_PENDING || status === REPORT_STATUS_APPROVED;
+    if (!blocksDuplicate) continue;
+
+    if (dataKey_(row[1]) === dateKey &&
+        normalizarComparacao_(row[2]) === normalizarComparacao_(roomCode) &&
+        normalizarComparacao_(row[3]) === normalizarComparacao_(studentName) &&
+        normalizarComparacao_(row[4]) === normalizarComparacao_(rule)) {
+      return {
+        type: 'DAILY',
+        report: filaDenunciaToObject_(row)
+      };
+    }
+  }
+  return null;
+}
+
 function salvarOcorrencia(dados) {
   dados = dados || {};
-  ensureOperationalSchema_();
+  var schema = ensureOperationalSchema_();
+  var shHist = schema.shHist;
+  var shQueue = schema.shQueue;
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var shHist = ss.getSheetByName('Historico_Ocorrencias');
   var userEmail = getUserEmail() || String(dados.userEmail || '').toLowerCase().trim();
   var perfil = getPermissaoUsuario_(userEmail);
 
@@ -14,7 +61,7 @@ function salvarOcorrencia(dados) {
   var roomCode = String(dados.roomCode || '').trim();
   var studentName = String(dados.studentName || '').trim();
   var rule = String(dados.rule || '').trim();
-  var obs = String(dados.obs || 'Lançado via WebApp').trim();
+  var obs = String(dados.obs || 'Registro via WebApp').trim();
   var requestId = String(dados.requestId || '').trim();
 
   if (!roomCode || !studentName || !rule) {
@@ -22,7 +69,7 @@ function salvarOcorrencia(dados) {
   }
 
   if (!perfil.isEEB && perfil.ownRoom && perfil.ownRoom !== 'TODAS' && roomCode === perfil.ownRoom) {
-    throw new Error('REGRA DE IMPARCIALIDADE: o representante não pode registrar ocorrências na própria turma (' + perfil.ownRoom + ').');
+    throw new Error('REGRA DE IMPARCIALIDADE: o representante não pode registrar denúncias na própria turma (' + perfil.ownRoom + ').');
   }
 
   var lock = LockService.getScriptLock();
@@ -31,89 +78,84 @@ function salvarOcorrencia(dados) {
     var now = new Date();
     var dateKey = Utilities.formatDate(now, APP_TIMEZONE, 'dd/MM/yyyy');
     var timestamp = Utilities.formatDate(now, APP_TIMEZONE, 'dd/MM/yyyy HH:mm:ss');
-    var lastRow = shHist.getLastRow();
 
-    if (lastRow >= 2) {
-      var existing = shHist.getRange(2, 1, lastRow - 1, 11).getValues();
-      for (var i = existing.length - 1; i >= 0; i--) {
-        var row = existing[i];
-
-        if (requestId && String(row[9] || '').trim() === requestId) {
-          return {
-            success: true,
-            duplicateRequest: true,
-            timestamp: String(row[1]),
-            id: row[0],
-            occurrence: {
-              id: row[0], timestamp: String(row[1]), roomCode: String(row[2]),
-              studentName: row[3], rule: row[4], points: Number(row[5]) || 1,
-              userEmail: row[6], role: row[7], obs: row[8], requestId: requestId,
-              reporterRoom: String(row[10] || '').trim()
-            }
-          };
-        }
-
-        if (dataKey_(row[1]) === dateKey &&
-            normalizarComparacao_(row[2]) === normalizarComparacao_(roomCode) &&
-            normalizarComparacao_(row[3]) === normalizarComparacao_(studentName) &&
-            normalizarComparacao_(row[4]) === normalizarComparacao_(rule)) {
-          return {
-            success: false,
-            code: 'DAILY_DUPLICATE',
-            message: studentName + ' já recebeu hoje uma ocorrência no critério "' + rule + '". É permitido apenas 1 registro diário por estudante em cada critério.',
-            existingId: row[0],
-            existingTimestamp: String(row[1])
-          };
-        }
-      }
+    var existingQueue = jaExisteDenunciaAtivaNoDia_(shQueue, dateKey, roomCode, studentName, rule, requestId);
+    if (existingQueue && existingQueue.type === 'REQUEST') {
+      return {
+        success: true,
+        duplicateRequest: true,
+        pending: existingQueue.report.status === REPORT_STATUS_PENDING,
+        report: existingQueue.report,
+        message: 'Esta denúncia já havia sido recebida. Nenhuma duplicidade foi criada.'
+      };
     }
 
-    var nextId = String(now.getTime()) + '-' + Utilities.getUuid().substring(0, 8);
-    var pointsDeducted = 1;
-    var effectiveRequestId = requestId || Utilities.getUuid();
-    var nextRow = shHist.getLastRow() + 1;
+    if (existingQueue && existingQueue.type === 'DAILY') {
+      return {
+        success: false,
+        code: 'DAILY_DUPLICATE',
+        message: studentName + ' já possui hoje uma denúncia ativa no critério "' + rule + '". Aguarde a análise da EEB/Gestão.',
+        existingId: existingQueue.report.id,
+        existingTimestamp: existingQueue.report.timestamp,
+        existingStatus: existingQueue.report.status
+      };
+    }
 
-    shHist.getRange(nextRow, 1, 1, 11).setValues([[
-      nextId,
+    var existingOfficial = jaExisteOcorrenciaOficialNoDia_(shHist, dateKey, roomCode, studentName, rule);
+    if (existingOfficial) {
+      return {
+        success: false,
+        code: 'DAILY_DUPLICATE',
+        message: studentName + ' já possui hoje uma ocorrência aprovada no critério "' + rule + '".',
+        existingId: existingOfficial.id,
+        existingTimestamp: existingOfficial.timestamp,
+        existingStatus: REPORT_STATUS_APPROVED
+      };
+    }
+
+    var reportId = 'REP-' + String(now.getTime()) + '-' + Utilities.getUuid().substring(0, 8);
+    var effectiveRequestId = requestId || Utilities.getUuid();
+    var reporterRoom = perfil.isEEB ? 'TODAS' : perfil.ownRoom;
+
+    var row = [
+      reportId,
       timestamp,
       roomCode,
       studentName,
       rule,
-      pointsDeducted,
       userEmail,
       perfil.role || 'REPRESENTANTE',
+      reporterRoom,
       obs,
       effectiveRequestId,
-      perfil.isEEB ? 'TODAS' : perfil.ownRoom
-    ]]);
+      REPORT_STATUS_PENDING,
+      '',
+      '',
+      '',
+      ''
+    ];
+
+    shQueue.getRange(shQueue.getLastRow() + 1, 1, 1, 15).setValues([row]);
+    var report = filaDenunciaToObject_(row);
 
     return {
       success: true,
       duplicateRequest: false,
+      pending: true,
+      report: report,
       timestamp: timestamp,
-      id: nextId,
-      occurrence: {
-        id: nextId,
-        timestamp: timestamp,
-        roomCode: roomCode,
-        studentName: studentName,
-        rule: rule,
-        points: pointsDeducted,
-        userEmail: userEmail,
-        role: perfil.role || 'REPRESENTANTE',
-        obs: obs,
-        requestId: effectiveRequestId,
-        reporterRoom: perfil.isEEB ? 'TODAS' : perfil.ownRoom
-      }
+      id: reportId,
+      message: 'Denúncia enviada para análise. Nenhum ponto foi alterado no ranking.'
     };
   } finally {
     lock.releaseLock();
   }
 }
 
+// Correção administrativa de uma ocorrência já aprovada.
 function anularPunicao(idOcorrencia) {
   if (!checkIsEEB()) {
-    throw new Error('Apenas o EEB e a Gestão Escolar têm permissão para anular punições.');
+    throw new Error('Apenas o EEB e a Gestão Escolar têm permissão para anular ocorrências aprovadas.');
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -128,22 +170,22 @@ function anularPunicao(idOcorrencia) {
     return {
       success: true,
       removedId: String(idOcorrencia),
-      message: 'Punição anulada com sucesso. Os pontos voltarão à turma no recálculo do ranking.'
+      message: 'Ocorrência aprovada anulada. Os pontos voltarão à turma no recálculo do ranking.'
     };
   } finally {
     lock.releaseLock();
   }
 }
 
+// Mantido para revisão excepcional de registros antigos que já tinham sido aprovados.
 function marcarDenunciaFalsa(idOcorrencia, motivo) {
   if (!checkIsEEB()) {
-    throw new Error('Apenas o EEB e a Gestão Escolar podem marcar uma denúncia como falsa.');
+    throw new Error('Apenas o EEB e a Gestão Escolar podem marcar uma ocorrência já aprovada como falsa.');
   }
 
-  ensureOperationalSchema_();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var shHist = ss.getSheetByName('Historico_Ocorrencias');
-  var shFalse = ss.getSheetByName('Historico_Denuncias_Falsas');
+  var schema = ensureOperationalSchema_();
+  var shHist = schema.shHist;
+  var shFalse = schema.shFalse;
   var reviewerEmail = getUserEmail();
   var reason = String(motivo || '').trim() || 'Denúncia considerada improcedente após análise do EEB/Gestão.';
 
@@ -168,18 +210,8 @@ function marcarDenunciaFalsa(idOcorrencia, motivo) {
     var reviewId = 'FALSE-' + String(now.getTime()) + '-' + Utilities.getUuid().substring(0, 8);
 
     shFalse.getRange(shFalse.getLastRow() + 1, 1, 1, 12).setValues([[
-      reviewId,
-      reviewTimestamp,
-      row[0],
-      row[1],
-      row[2],
-      row[3],
-      row[4],
-      reporterEmail,
-      reporterRoom,
-      penaltyPoints,
-      reviewerEmail,
-      reason
+      reviewId, reviewTimestamp, row[0], row[1], row[2], row[3], row[4],
+      reporterEmail, reporterRoom, penaltyPoints, reviewerEmail, reason
     ]]);
 
     shHist.deleteRow(rowIndex);
@@ -206,8 +238,8 @@ function marcarDenunciaFalsa(idOcorrencia, motivo) {
         reason: reason
       },
       message: penaltyPoints > 0
-        ? 'Denúncia marcada como falsa. O ponto foi devolvido à turma acusada e ' + penaltyPoints + ' ponto foi descontado da turma ' + reporterRoom + ' do denunciante.'
-        : 'Denúncia marcada como falsa e ponto devolvido à turma acusada. O denunciante não possui turma de origem cadastrada para aplicação de penalidade.'
+        ? 'Ocorrência marcada como falsa. O ponto foi devolvido à turma acusada e ' + penaltyPoints + ' ponto foi descontado da turma ' + reporterRoom + ' do denunciante.'
+        : 'Ocorrência marcada como falsa e ponto devolvido à turma acusada.'
     };
   } finally {
     lock.releaseLock();
