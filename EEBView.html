@@ -1,16 +1,68 @@
 <div id="tab-eeb-manager" class="tab-content">
-  <div class="glass-card">
-    <div class="card-title"><div><i class="fa-solid fa-user-gear"></i> Gestão EEB — Estudantes</div></div>
-    <form onsubmit="handleCadastrarAluno(event)" style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;margin-bottom:16px;"><select id="cadTurmaSelect" class="custom-select" required><option value="">Turma</option></select><input id="cadNomeCompleto" class="custom-input" placeholder="Nome completo" required><button class="btn-submit-occ" style="margin:0;width:auto;" type="submit">Adicionar</button></form>
-    <select id="removerTurmaSelect" class="custom-select" onchange="renderAlunosRemover()"><option value="">Selecione a turma para gerenciar estudantes</option></select><div id="listaAlunosRemoverContainer" style="margin-top:12px;"></div>
+  <section class="management-hero">
+    <div>
+      <span class="eyebrow">CENTRAL PEDAGÓGICA</span>
+      <h2>Revisão de denúncias</h2>
+      <p>Somente registros aprovados entram no ranking. Negativas ficam arquivadas e denúncias falsas geram a penalidade prevista para a turma do denunciante.</p>
+    </div>
+    <div class="pending-counter-card">
+      <span id="pendingReviewCount" class="pending-counter">0</span>
+      <small>aguardando análise</small>
+    </div>
+  </section>
+
+  <div class="glass-card review-queue-card">
+    <div class="card-title">
+      <div><i class="fa-solid fa-inbox"></i> Fila de análise</div>
+      <div class="review-filter-group">
+        <button type="button" class="review-filter active" data-review-filter="PENDENTE" onclick="setReviewFilter('PENDENTE',this)">Pendentes</button>
+        <button type="button" class="review-filter" data-review-filter="TODAS" onclick="setReviewFilter('TODAS',this)">Todas</button>
+        <button type="button" class="review-filter" data-review-filter="APROVADA" onclick="setReviewFilter('APROVADA',this)">Aprovadas</button>
+        <button type="button" class="review-filter" data-review-filter="NEGADA" onclick="setReviewFilter('NEGADA',this)">Negadas</button>
+        <button type="button" class="review-filter" data-review-filter="FALSA" onclick="setReviewFilter('FALSA',this)">Falsas</button>
+      </div>
+    </div>
+    <div class="decision-legend">
+      <span class="legend-item approve"><i class="fa-solid fa-check"></i> Aprovar: entra no ranking</span>
+      <span class="legend-item deny"><i class="fa-solid fa-minus"></i> Negar: arquiva sem pontuar</span>
+      <span class="legend-item false"><i class="fa-solid fa-triangle-exclamation"></i> Falsa: arquiva e penaliza o denunciante</span>
+    </div>
+    <div id="reviewQueueContainer" class="review-queue-list"></div>
   </div>
-  <div class="glass-card">
-    <div class="card-title"><div><i class="fa-solid fa-users-gear"></i> Representantes e Permissões</div></div>
-    <form onsubmit="handleSalvarPermissao(event)" style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;margin-bottom:16px;"><input id="permEmailInput" type="email" class="custom-input" placeholder="E-mail institucional" required><select id="permOwnRoomSelect" class="custom-select" required><option value="">Turma de origem</option></select><select id="permCanEditSelect" class="custom-select"><option value="true">Ativo</option><option value="false">Bloqueado</option></select><button class="btn-submit-occ" style="margin:0;width:auto;background:linear-gradient(135deg,#8b5cf6,#6d28d9);" type="submit">Salvar</button></form>
-    <div style="overflow-x:auto;"><table class="app-table"><thead><tr><th>E-mail</th><th>Perfil</th><th>Turma</th><th>Acesso</th><th>Editar?</th></tr></thead><tbody id="permTbody"></tbody></table></div>
+
+  <div class="management-grid">
+    <div class="glass-card">
+      <div class="card-title"><div><i class="fa-solid fa-user-plus"></i> Estudantes</div></div>
+      <form onsubmit="handleCadastrarAluno(event)" class="management-form-grid student-management-form">
+        <select id="cadTurmaSelect" class="custom-select" required><option value="">Turma</option></select>
+        <input id="cadNomeCompleto" class="custom-input" placeholder="Nome completo" required>
+        <button class="btn-secondary-action" type="submit"><i class="fa-solid fa-plus"></i> Adicionar</button>
+      </form>
+      <select id="removerTurmaSelect" class="custom-select" onchange="renderAlunosRemover()"><option value="">Selecione a turma para gerenciar estudantes</option></select>
+      <div id="listaAlunosRemoverContainer" class="student-management-list"></div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-title"><div><i class="fa-solid fa-users-gear"></i> Representantes</div></div>
+      <form onsubmit="handleSalvarPermissao(event)" class="management-form-stack">
+        <input id="permEmailInput" type="email" class="custom-input" placeholder="E-mail institucional" required>
+        <select id="permOwnRoomSelect" class="custom-select" required><option value="">Turma de origem</option></select>
+        <select id="permCanEditSelect" class="custom-select"><option value="true">Ativo</option><option value="false">Bloqueado</option></select>
+        <button class="btn-secondary-action purple" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar representante</button>
+      </form>
+    </div>
   </div>
-  <div class="glass-card" style="border-color:#d97706;">
-    <div class="card-title" style="color:#fbbf24;"><div><i class="fa-solid fa-shield-circle-exclamation"></i> Auditoria de Denúncias Falsas</div><span style="font-size:.75rem;color:var(--text-sub);">A ocorrência falsa é retirada da turma acusada e a turma do denunciante perde 1 ponto quando aplicável.</span></div>
-    <div style="overflow-x:auto;"><table class="app-table"><thead><tr><th>Revisão</th><th>Turma / Estudante</th><th>Regra</th><th>Denunciante</th><th>Turma Penalizada</th><th>Penalidade</th><th>Motivo / Revisor</th></tr></thead><tbody id="falseReportsBody"></tbody></table></div>
+
+  <div class="glass-card">
+    <div class="card-title"><div><i class="fa-solid fa-address-card"></i> Permissões cadastradas</div></div>
+    <div class="table-scroll"><table class="app-table"><thead><tr><th>E-mail</th><th>Perfil</th><th>Turma</th><th>Acesso</th><th>Editar?</th></tr></thead><tbody id="permTbody"></tbody></table></div>
+  </div>
+
+  <div class="glass-card audit-card">
+    <div class="card-title">
+      <div><i class="fa-solid fa-shield-circle-exclamation"></i> Auditoria de denúncias falsas</div>
+      <span class="subtle-copy">Registro permanente das decisões e penalidades</span>
+    </div>
+    <div class="table-scroll"><table class="app-table"><thead><tr><th>Revisão</th><th>Turma / Estudante</th><th>Regra</th><th>Denunciante</th><th>Turma Penalizada</th><th>Penalidade</th><th>Motivo / Revisor</th></tr></thead><tbody id="falseReportsBody"></tbody></table></div>
   </div>
 </div>
