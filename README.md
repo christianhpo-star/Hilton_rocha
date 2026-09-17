@@ -6,29 +6,54 @@ Código-fonte do WebApp em Google Apps Script usado no projeto escolar **Nossa T
 
 - `Core.gs` — autenticação, permissões, utilitários e migração segura da planilha.
 - `DataService.gs` — leitura e montagem dos dados enviados ao WebApp.
-- `Occurrences.gs` — registro, limite diário, idempotência, anulação e denúncia falsa.
+- `Occurrences.gs` — envio de denúncias, limite diário, idempotência e correções de ocorrências aprovadas.
+- `ReviewService.gs` — aprovação, negativa e classificação de denúncia falsa pela EEB/Gestão.
 - `Management.gs` — estudantes, representantes e bonificações.
-- `Index.html` / `Styles.html` — estrutura e estilos.
+- `Index.html` / `Styles.html` — estrutura e design da interface.
 - `Nav.html` e `*View.html` — componentes visuais por módulo.
-- `ClientCore.html` — lógica do navegador; arquivos `Client*.html` ficam reservados para modularização incremental.
+- `ClientCore.html`, `ClientOccurrences.html`, `ClientReview.html`, `ClientRanking.html`, `ClientHistory.html` e `ClientBonus.html` — lógica do navegador modularizada por responsabilidade.
 
-## Regras implementadas nesta revisão
+## Fluxo das denúncias
 
-1. **Anulação restaura a pontuação da turma.** O ranking é calculado a partir das ocorrências ativas; ao anular, a ocorrência deixa de participar do cálculo.
-2. **Limite diário por estudante e critério.** O mesmo estudante não pode receber duas ocorrências do mesmo critério no mesmo dia. Critérios diferentes continuam permitidos.
-3. **Denúncia falsa.** EEB/Gestão pode marcar uma ocorrência como falsa. A ocorrência é retirada da pontuação da turma denunciada, fica registrada em auditoria e gera penalidade de **1 ponto** para a turma de origem do representante que realizou a denúncia, quando aplicável.
-4. **Proteção contra duplicidade.** O backend usa `LockService`, `requestId` idempotente e a regra diária, evitando duplicidades inclusive em requisições concorrentes.
-5. **Atualização mais rápida.** Após registrar, anular ou marcar denúncia falsa, a interface atualiza o estado local imediatamente, sem recarregar todos os dados da planilha.
-6. **Permissões endurecidas.** Funções de EEB/Gestão dependem do perfil cadastrado na aba `Permissoes`; apenas possuir e-mail institucional não concede privilégios administrativos.
+1. O representante envia a denúncia.
+2. A denúncia entra na aba `Fila_Denuncias` com status **PENDENTE**.
+3. Enquanto estiver pendente, **nenhum ponto é descontado**.
+4. EEB/Gestão pode:
+   - **APROVAR** — cria uma ocorrência em `Historico_Ocorrencias` e passa a contar no ranking;
+   - **NEGAR** — mantém o registro para auditoria, sem alterar pontos;
+   - marcar como **FALSA** — não entra no ranking e, quando aplicável, desconta **1 ponto da turma do denunciante**.
+5. O representante consegue acompanhar o status das próprias denúncias sem visualizar denúncias de outros representantes.
+
+## Regras e proteções
+
+- **Uma denúncia ativa por estudante/dia/critério.** Critérios diferentes continuam permitidos.
+- A checagem considera denúncias pendentes e ocorrências já aprovadas.
+- `LockService` e `requestId` idempotente evitam duplicidades inclusive em requisições concorrentes.
+- O ranking usa somente `Historico_Ocorrencias`, portanto denúncias pendentes ou negadas nunca alteram o placar.
+- Funções administrativas dependem do perfil da aba `Permissoes`; apenas possuir e-mail institucional não concede acesso de EEB/Gestão.
+- Denúncias falsas ficam registradas em `Historico_Denuncias_Falsas` para auditoria.
 
 ## Migração automática da planilha
 
-Ao executar o WebApp, o código mantém os dados existentes e acrescenta apenas o necessário:
+Ao abrir o WebApp com esta versão, o código preserva os dados existentes e acrescenta somente o necessário:
 
-- colunas `ID Requisição` e `Turma Registrador` em `Historico_Ocorrencias`;
-- aba `Historico_Denuncias_Falsas` para auditoria.
+- colunas `ID Requisição` e `Turma Registrador` em `Historico_Ocorrencias`, caso ainda não existam;
+- aba `Fila_Denuncias` com status e dados de revisão;
+- aba `Historico_Denuncias_Falsas`, caso ainda não exista.
 
 Os dados de estudantes e usuários autorizados **não são versionados neste repositório público**. Eles permanecem somente na planilha da escola.
+
+## Interface desta revisão
+
+A interface do estudante foi reformulada para reforçar o caráter pedagógico do processo:
+
+- linguagem de **envio para análise**, em vez de punição imediata;
+- fluxo visual `Você envia → EEB analisa → Ranking atualiza`;
+- acompanhamento das próprias denúncias com status visual;
+- cards de critérios maiores e mais adequados ao uso no celular;
+- feedback por notificações discretas em vez de depender apenas de `alert()`;
+- navegação e ranking com visual mais moderno e responsivo;
+- painel EEB com fila e contador de pendências.
 
 ## Publicação
 
