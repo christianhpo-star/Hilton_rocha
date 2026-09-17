@@ -6,65 +6,185 @@ const ROOM_IDENTITIES={
   '3º INFORMÁTICA':{icon:'fa-laptop-code',emoji:'💻',accent:'#10b981',soft:'rgba(16,185,129,.14)',label:'Informática'},
   '3º SEG_TRABALHO':{icon:'fa-helmet-safety',emoji:'🦺',accent:'#eab308',soft:'rgba(234,179,8,.14)',label:'Segurança'}
 };
+
 function roomIdentity(code){return ROOM_IDENTITIES[code]||{icon:'fa-users',emoji:'🎓',accent:'#3b82f6',soft:'rgba(59,130,246,.14)',label:'Turma'}}
 function applyRoomTheme(el,code){if(!el)return;const id=roomIdentity(code);el.style.setProperty('--room-accent',id.accent);el.style.setProperty('--room-soft',id.soft)}
+function applyManagementTheme(el){if(!el)return;el.style.setProperty('--room-accent','#8b5cf6');el.style.setProperty('--room-soft','rgba(139,92,246,.16)')}
 function experienceMonthOk(timestamp){return activeRankingMonth==='ALL'||String(timestamp||'').split('/')[1]?.trim()===activeRankingMonth}
 function buildExperienceScores(){
   const rooms={};roomCodes().forEach(c=>rooms[c]={uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0});
-  (appData.historyList||[]).forEach(i=>{if(!rooms[i.roomCode]||!experienceMonthOk(i.timestamp))return;const r=String(i.rule||'').toLowerCase();if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);else if(r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1)});
+  (appData.historyList||[]).forEach(i=>{
+    if(!rooms[i.roomCode]||!experienceMonthOk(i.timestamp))return;
+    const r=String(i.rule||'').toLowerCase();
+    if(r.includes('uniforme'))rooms[i.roomCode].uniforme=Math.max(0,rooms[i.roomCode].uniforme-1);
+    else if(r.includes('sapato'))rooms[i.roomCode].sapato=Math.max(0,rooms[i.roomCode].sapato-1);
+    else if(r.includes('atraso')||r.includes('entrada'))rooms[i.roomCode].entrada=Math.max(0,rooms[i.roomCode].entrada-1);
+    else if(r.includes('fora')||r.includes('sala'))rooms[i.roomCode].sala=Math.max(0,rooms[i.roomCode].sala-1);
+  });
   (appData.bonificacoesList||[]).forEach(b=>{if(rooms[b.roomCode]&&experienceMonthOk(b.timestamp))rooms[b.roomCode].bonus+=Number(b.points)||0});
   (appData.falseReportsList||[]).forEach(f=>{const d=f.originalTimestamp||f.timestamp;if(f.reporterRoom&&rooms[f.reporterRoom]&&experienceMonthOk(d))rooms[f.reporterRoom].falsePenalty+=Number(f.penaltyPoints)||0});
   Object.values(rooms).forEach(s=>s.total=s.uniforme+s.sapato+s.entrada+s.sala+s.bonus-s.falsePenalty);
   return rooms;
 }
 function getExperienceRanking(){const rooms=buildExperienceScores();return Object.entries(rooms).sort((a,b)=>b[1].total-a[1].total)}
-function currentExperienceRoom(ranking){const own=String(appData.userOwnRoom||'').trim();if(own&&own!=='TODAS'&&ranking.some(([c])=>c===own))return own;return ranking[0]?.[0]||roomCodes()[0]||''}
+function currentExperienceRoom(ranking){
+  if(appData.isEEB)return '';
+  const own=String(appData.userOwnRoom||'').trim();
+  return own&&own!=='TODAS'&&ranking.some(([c])=>c===own)?own:'';
+}
 function parseBrTimestamp(value){const m=String(value||'').match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);if(!m)return 0;return new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(m[4]||0),Number(m[5]||0),Number(m[6]||0)).getTime()}
 function shortTimestamp(value){const s=String(value||'');return s.length>=16?s.slice(0,16):s}
+function canonicalRuleLabel(value){
+  const raw=String(value||'').trim(),r=raw.toLowerCase();
+  if(r.includes('uniforme'))return 'Sem Uniforme';
+  if(r.includes('sapato'))return 'Sem Sapato Fechado';
+  if(r.includes('atraso')||r.includes('entrada'))return 'Atraso na Entrada';
+  if(r.includes('fora')||r.includes('sala'))return 'Fora de Sala';
+  return raw.replace(/undefined/gi,'').replace(/^\d+\.\s*/,'').trim()||'Critério confirmado';
+}
+function setHomeAction(id,icon,label,tab){const btn=qs(id);if(!btn)return;btn.style.display='inline-flex';btn.innerHTML=`<i class="fa-solid ${icon}"></i> ${label}`;btn.onclick=()=>switchTab(tab)}
+function setHomeKpi(index,label,value,hint,icon){
+  if(qs(`homeKpi${index}Label`))qs(`homeKpi${index}Label`).textContent=label;
+  const valueIds={1:'homeRank',2:'homeScore',3:'homeGap',4:'homeMyPending'};
+  const hintIds={1:'homeRankHint',2:'homeScoreHint',3:'homeGapHint',4:'homeMyPendingHint'};
+  if(qs(valueIds[index]))qs(valueIds[index]).textContent=value;
+  if(qs(hintIds[index]))qs(hintIds[index]).textContent=hint;
+  const iconEl=qs(`homeKpi${index}Icon`);if(iconEl)iconEl.className=`fa-solid ${icon}`;
+}
+function renderCountCards(counts){
+  const root=qs('homeReportSummary');if(!root)return;
+  root.innerHTML=`<div class="home-report-mini"><strong>${Number(counts.PENDENTE)||0}</strong><span>Pendentes</span></div><div class="home-report-mini"><strong>${Number(counts.APROVADA)||0}</strong><span>Aprovadas</span></div><div class="home-report-mini"><strong>${Number(counts.NEGADA)||0}</strong><span>Negadas</span></div><div class="home-report-mini"><strong>${Number(counts.FALSA)||0}</strong><span>Falsas</span></div>`;
+}
+function countStatuses(list){const counts={PENDENTE:0,APROVADA:0,NEGADA:0,FALSA:0};(list||[]).forEach(r=>{const s=String(r.status||'').toUpperCase();if(Object.prototype.hasOwnProperty.call(counts,s))counts[s]++});return counts}
+function countReviewedToday(status){const today=todayBrazilKey();return(appData.reviewQueueList||[]).filter(r=>String(r.status||'').toUpperCase()===status&&String(r.reviewedAt||'').slice(0,10)===today).length}
+
+function renderStudentHome(ranking,code){
+  const pos=ranking.findIndex(([c])=>c===code);const score=ranking[pos]?.[1]||{uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0,total:100};const id=roomIdentity(code);
+  applyRoomTheme(qs('homeHero'),code);
+  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML=`<i class="fa-solid ${id.icon}"></i>`;
+  if(qs('homeEyebrow'))qs('homeEyebrow').textContent='MINHA TURMA';
+  if(qs('homeTitle'))qs('homeTitle').textContent=code;
+  if(qs('homeSubtitle'))qs('homeSubtitle').textContent=(appData.roomMapping||{})[code]||'Pontuação, posição e novidades em um só lugar.';
+  setHomeAction('homePrimaryAction','fa-paper-plane','Enviar denúncia','tab-registrar');
+  setHomeAction('homeSecondaryAction','fa-ranking-star','Ver ranking completo','tab-ranking');
+
+  const ahead=pos>0?ranking[pos-1][1].total:null;const gap=ahead===null?0:Math.max(0,ahead-score.total);const myPending=(appData.myReportsList||[]).filter(r=>String(r.status||'').toUpperCase()==='PENDENTE').length;
+  setHomeKpi(1,'POSIÇÃO ATUAL',ranking.length?`${pos+1}º`:'—',pos===0?'Liderança atual':`entre ${ranking.length} turmas`,'fa-trophy');
+  setHomeKpi(2,'PONTUAÇÃO',Number(score.total)||0,score.bonus?`inclui +${score.bonus} de bônus`:'pontuação atual','fa-bolt');
+  setHomeKpi(3,'PRÓXIMA POSIÇÃO',pos===0?'—':`${gap} pt${gap===1?'':'s'}`,pos===0?'Sua referência é manter a liderança':`para alcançar o ${pos}º lugar`,'fa-arrow-trend-up');
+  setHomeKpi(4,'MINHAS PENDENTES',myPending,'Aguardando análise pedagógica','fa-hourglass-half');
+
+  if(qs('homeMainPanelTitle'))qs('homeMainPanelTitle').innerHTML='<i class="fa-solid fa-chart-simple"></i> Minha turma';
+  if(qs('homeRoomBadge')){qs('homeRoomBadge').innerHTML=`${id.emoji} ${esc(code)}`;applyRoomTheme(qs('homeRoomBadge'),code)}
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML=`<h3>${esc((appData.roomMapping||{})[code]||code)}</h3><p>${pos===0?'Está na liderança neste recorte.':`Está em ${pos+1}º lugar com ${score.total} pontos.`}${score.bonus?` Recebeu +${score.bonus} pontos em reconhecimentos.`:''}${score.falsePenalty?` Possui -${score.falsePenalty} ponto(s) por denúncia falsa.`:''}</p>`;
+  if(qs('homeProgressFill'))qs('homeProgressFill').style.width=`${Math.max(0,Math.min(100,score.total))}%`;
+  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML=`<span>Uniforme ${score.uniforme}/40</span><span>Sapato ${score.sapato}/30</span><span>Entrada ${score.entrada}/20</span><span>Sala ${score.sala}/10</span>`;
+
+  if(qs('homeStatusTitle'))qs('homeStatusTitle').innerHTML='<i class="fa-solid fa-paper-plane"></i> Minhas denúncias';
+  setHomeAction('homeStatusAction','fa-arrow-right','Ver todas','tab-registrar');
+  renderCountCards(countStatuses(appData.myReportsList||[]));
+  if(qs('homeActivityTitle'))qs('homeActivityTitle').innerHTML='<i class="fa-solid fa-sparkles"></i> Movimentações da minha turma';
+  if(qs('homeActivitySubtitle'))qs('homeActivitySubtitle').textContent='Somente eventos que afetam a sua turma';
+}
+
+function renderEEBHome(ranking){
+  applyManagementTheme(qs('homeHero'));
+  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML='<i class="fa-solid fa-shield-halved"></i>';
+  if(qs('homeEyebrow'))qs('homeEyebrow').textContent='EEB / GESTÃO ESCOLAR';
+  if(qs('homeTitle'))qs('homeTitle').textContent='Painel de acompanhamento';
+  if(qs('homeSubtitle'))qs('homeSubtitle').textContent='Analise denúncias pendentes e acompanhe o panorama geral da competição.';
+  setHomeAction('homePrimaryAction','fa-inbox','Analisar denúncias','tab-eeb-manager');
+  setHomeAction('homeSecondaryAction','fa-ranking-star','Ver ranking completo','tab-ranking');
+
+  setHomeKpi(1,'AGUARDANDO ANÁLISE',Number(appData.pendingReviewCount)||0,'denúncias pendentes','fa-inbox');
+  setHomeKpi(2,'APROVADAS HOJE',countReviewedToday('APROVADA'),'decisões confirmadas hoje','fa-circle-check');
+  setHomeKpi(3,'NEGADAS HOJE',countReviewedToday('NEGADA'),'arquivadas sem pontuação','fa-circle-minus');
+  setHomeKpi(4,'FALSAS HOJE',countReviewedToday('FALSA'),'com auditoria registrada','fa-triangle-exclamation');
+
+  const leader=ranking[0];const leaderCode=leader?.[0]||'';const leaderScore=leader?.[1]?.total||0;
+  if(qs('homeMainPanelTitle'))qs('homeMainPanelTitle').innerHTML='<i class="fa-solid fa-ranking-star"></i> Classificação geral';
+  if(qs('homeRoomBadge')){qs('homeRoomBadge').textContent=`${ranking.length} turmas`;applyManagementTheme(qs('homeRoomBadge'))}
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML=leader?`<h3>Líder atual: ${esc(leaderCode)}</h3><p>${esc((appData.roomMapping||{})[leaderCode]||leaderCode)} está com ${leaderScore} pontos neste recorte.</p>`:'<h3>Sem dados de classificação</h3><p>O ranking será exibido quando houver turmas configuradas.</p>';
+  if(qs('homeProgressFill'))qs('homeProgressFill').style.width=`${Math.max(0,Math.min(100,leaderScore))}%`;
+  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML=ranking.slice(0,3).map(([code,s],idx)=>`<span>${idx+1}º ${esc(code)} · ${s.total} pts</span>`).join('');
+
+  if(qs('homeStatusTitle'))qs('homeStatusTitle').innerHTML='<i class="fa-solid fa-shield-halved"></i> Fila pedagógica';
+  setHomeAction('homeStatusAction','fa-arrow-right','Abrir fila','tab-eeb-manager');
+  renderCountCards(countStatuses(appData.reviewQueueList||[]));
+  if(qs('homeActivityTitle'))qs('homeActivityTitle').innerHTML='<i class="fa-solid fa-building-circle-check"></i> Movimentações oficiais da escola';
+  if(qs('homeActivitySubtitle'))qs('homeActivitySubtitle').textContent='Visão institucional; estes registros não são apresentados como denúncias feitas por você';
+}
+
+function renderUnconfiguredHome(ranking){
+  applyManagementTheme(qs('homeHero'));
+  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML='<i class="fa-solid fa-user-lock"></i>';
+  if(qs('homeEyebrow'))qs('homeEyebrow').textContent='PERFIL DE ACESSO';
+  if(qs('homeTitle'))qs('homeTitle').textContent='Perfil sem turma ou função administrativa';
+  if(qs('homeSubtitle'))qs('homeSubtitle').textContent=appData.profileFound===false?'Seu e-mail não foi encontrado na aba Permissoes. A gestão precisa cadastrá-lo antes de liberar recursos.':'Seu perfil existe, mas não está associado a uma turma nem reconhecido como EEB/Gestão.';
+  setHomeAction('homePrimaryAction','fa-ranking-star','Ver ranking','tab-ranking');
+  setHomeAction('homeSecondaryAction','fa-book-open','Ver regras','tab-regulamento');
+  setHomeKpi(1,'TURMAS',ranking.length,'configuradas no sistema','fa-school');
+  setHomeKpi(2,'PERFIL',appData.userRoleDesc||'VISUALIZADOR','acesso atual','fa-user');
+  setHomeKpi(3,'EDIÇÃO',appData.userCanEdit?'SIM':'NÃO','permissão de registro','fa-pen');
+  setHomeKpi(4,'PENDÊNCIAS','—','sem fila pessoal vinculada','fa-hourglass-half');
+  if(qs('homeMainPanelTitle'))qs('homeMainPanelTitle').innerHTML='<i class="fa-solid fa-ranking-star"></i> Classificação geral';
+  if(qs('homeRoomBadge'))qs('homeRoomBadge').textContent='Acesso de consulta';
+  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML='<h3>Nenhuma turma atribuída ao seu perfil</h3><p>Não usamos mais a turma líder como se fosse a sua turma. Revise a aba Permissoes para vincular corretamente este usuário.</p>';
+  if(qs('homeProgressFill'))qs('homeProgressFill').style.width='0%';
+  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML='';
+  if(qs('homeStatusTitle'))qs('homeStatusTitle').innerHTML='<i class="fa-solid fa-circle-info"></i> Situação do acesso';
+  setHomeAction('homeStatusAction','fa-book-open','Ver regras','tab-regulamento');
+  if(qs('homeReportSummary'))qs('homeReportSummary').innerHTML='<div class="home-report-mini" style="grid-column:1/-1"><strong>Configuração necessária</strong><span>Cadastre o e-mail na aba Permissoes com o perfil e o acesso corretos.</span></div>';
+  if(qs('homeActivityTitle'))qs('homeActivityTitle').innerHTML='<i class="fa-solid fa-sparkles"></i> Movimentações da competição';
+  if(qs('homeActivitySubtitle'))qs('homeActivitySubtitle').textContent='O feed pessoal fica oculto enquanto o perfil não estiver configurado';
+}
 
 function renderHomeExperience(){
   const root=qs('tab-home');if(!root)return;
-  const ranking=getExperienceRanking();const code=currentExperienceRoom(ranking);const pos=Math.max(0,ranking.findIndex(([c])=>c===code));const score=ranking[pos]?.[1]||{uniforme:40,sapato:30,entrada:20,sala:10,bonus:0,falsePenalty:0,total:100};const id=roomIdentity(code);applyRoomTheme(qs('homeHero'),code);
-  if(qs('homeRoomSymbol'))qs('homeRoomSymbol').innerHTML=`<i class="fa-solid ${id.icon}"></i>`;
-  if(appData.isEEB){
-    if(qs('homeEyebrow'))qs('homeEyebrow').textContent='VISÃO GERAL DA ESCOLA';
-    if(qs('homeTitle'))qs('homeTitle').textContent='Acompanhe a competição';
-    if(qs('homeSubtitle'))qs('homeSubtitle').textContent='Resumo da classificação e das movimentações mais recentes.';
-  }else{
-    if(qs('homeEyebrow'))qs('homeEyebrow').textContent='MINHA TURMA';
-    if(qs('homeTitle'))qs('homeTitle').textContent=code||'Acompanhe sua turma';
-    if(qs('homeSubtitle'))qs('homeSubtitle').textContent=(appData.roomMapping||{})[code]||'Pontuação, posição e novidades em um só lugar.';
+  if(!appData.userEmail){
+    ['homeRank','homeScore','homeGap','homeMyPending'].forEach(id=>{if(qs(id))qs(id).textContent='—'});
+    return;
   }
-  if(qs('homeRank'))qs('homeRank').textContent=ranking.length?`${pos+1}º`:'—';
-  if(qs('homeRankHint'))qs('homeRankHint').textContent=pos===0?'Liderança atual':`entre ${ranking.length} turmas`;
-  if(qs('homeScore'))qs('homeScore').textContent=Number(score.total)||0;
-  if(qs('homeScoreHint'))qs('homeScoreHint').textContent=score.bonus?`inclui +${score.bonus} de bônus`:'pontuação atual';
-  const ahead=pos>0?ranking[pos-1][1].total:null;const gap=ahead===null?0:Math.max(0,ahead-score.total);
-  if(qs('homeGap'))qs('homeGap').textContent=pos===0?'—':`${gap} pt${gap===1?'':'s'}`;
-  if(qs('homeGapHint'))qs('homeGapHint').textContent=pos===0?'Sua referência é manter a liderança':`para alcançar o ${pos}º lugar`;
-  const myPending=(appData.myReportsList||[]).filter(r=>String(r.status||'').toUpperCase()==='PENDENTE').length;
-  if(qs('homeMyPending'))qs('homeMyPending').textContent=myPending;
-  if(qs('homeRoomBadge')){qs('homeRoomBadge').innerHTML=`${id.emoji} ${esc(code||'Turma')}`;applyRoomTheme(qs('homeRoomBadge'),code)}
-  if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML=`<h3>${esc((appData.roomMapping||{})[code]||code||'Visão geral')}</h3><p>${pos===0?'Está na liderança neste recorte.':`Está em ${pos+1}º lugar com ${score.total} pontos.`}${score.bonus?` Recebeu +${score.bonus} pontos em reconhecimentos.`:''}${score.falsePenalty?` Possui -${score.falsePenalty} ponto(s) por denúncia falsa.`:''}</p>`;
-  if(qs('homeProgressFill'))qs('homeProgressFill').style.width=`${Math.max(0,Math.min(100,score.total))}%`;
-  if(qs('homeCriteriaChips'))qs('homeCriteriaChips').innerHTML=`<span>Uniforme ${score.uniforme}/40</span><span>Sapato ${score.sapato}/30</span><span>Entrada ${score.entrada}/20</span><span>Sala ${score.sala}/10</span>`;
-  const mine=appData.myReportsList||[];const counts={PENDENTE:0,APROVADA:0,NEGADA:0,FALSA:0};mine.forEach(r=>{const s=String(r.status||'').toUpperCase();if(counts[s]!==undefined)counts[s]++});
-  if(qs('homeReportSummary'))qs('homeReportSummary').innerHTML=`<div class="home-report-mini"><strong>${counts.PENDENTE}</strong><span>Pendentes</span></div><div class="home-report-mini"><strong>${counts.APROVADA}</strong><span>Aprovadas</span></div><div class="home-report-mini"><strong>${counts.NEGADA}</strong><span>Negadas</span></div><div class="home-report-mini"><strong>${counts.FALSA}</strong><span>Falsas</span></div>`;
+  const ranking=getExperienceRanking();
+  if(appData.isEEB)return renderEEBHome(ranking);
+  const code=currentExperienceRoom(ranking);
+  if(!code)return renderUnconfiguredHome(ranking);
+  renderStudentHome(ranking,code);
 }
+
 function renderActivityFeed(){
-  const root=qs('activityFeed');if(!root)return;const events=[];
-  (appData.historyList||[]).forEach(i=>events.push({time:parseBrTimestamp(i.timestamp),stamp:i.timestamp,type:'approved',icon:'fa-circle-check',title:`${i.roomCode} teve uma ocorrência aprovada`,detail:String(i.rule||'Critério confirmado pela EEB/Gestão.')}));
-  (appData.bonificacoesList||[]).forEach(b=>events.push({time:parseBrTimestamp(b.timestamp),stamp:b.timestamp,type:'bonus',icon:'fa-star',title:`${b.roomCode} recebeu +${Number(b.points)||0} pontos`,detail:String(b.category||'Reconhecimento pedagógico')}));
-  (appData.falseReportsList||[]).forEach(f=>{if(!f.reporterRoom)return;events.push({time:parseBrTimestamp(f.timestamp),stamp:f.timestamp,type:'false',icon:'fa-shield-halved',title:`${f.reporterRoom} recebeu penalidade por denúncia falsa`,detail:`-${Number(f.penaltyPoints)||0} ponto(s) após revisão pedagógica`})});
-  events.sort((a,b)=>b.time-a.time);const list=events.slice(0,8);
-  root.innerHTML=list.map((e,idx)=>`<div class="activity-item ${e.type}" style="animation-delay:${idx*35}ms"><span class="activity-icon"><i class="fa-solid ${e.icon}"></i></span><div class="activity-copy"><strong>${esc(e.title)}</strong><span>${esc(e.detail)}</span></div><span class="activity-time">${esc(shortTimestamp(e.stamp))}</span></div>`).join('')||'<div class="empty-state"><i class="fa-solid fa-sparkles"></i>Ainda não há movimentações oficiais neste período.</div>';
+  const root=qs('activityFeed');if(!root)return;
+  let events=[];
+  (appData.historyList||[]).forEach(i=>events.push({roomCode:String(i.roomCode||'').trim(),time:parseBrTimestamp(i.timestamp),stamp:i.timestamp,type:'approved',icon:'fa-circle-check',title:`Ocorrência aprovada em ${String(i.roomCode||'').trim()}`,detail:canonicalRuleLabel(i.rule)}));
+  (appData.bonificacoesList||[]).forEach(b=>events.push({roomCode:String(b.roomCode||'').trim(),time:parseBrTimestamp(b.timestamp),stamp:b.timestamp,type:'bonus',icon:'fa-star',title:`${String(b.roomCode||'').trim()} recebeu +${Number(b.points)||0} pontos`,detail:String(b.category||'Reconhecimento pedagógico')}));
+  (appData.falseReportsList||[]).forEach(f=>{if(!f.reporterRoom)return;events.push({roomCode:String(f.reporterRoom||'').trim(),time:parseBrTimestamp(f.timestamp),stamp:f.timestamp,type:'false',icon:'fa-shield-halved',title:`Penalidade aplicada à turma ${String(f.reporterRoom||'').trim()}`,detail:`-${Number(f.penaltyPoints)||0} ponto(s) após revisão de denúncia falsa`})});
+
+  if(!appData.isEEB){
+    const own=String(appData.userOwnRoom||'').trim();
+    events=own&&own!=='TODAS'?events.filter(e=>e.roomCode===own):[];
+  }
+  events.sort((a,b)=>b.time-a.time);const list=events.slice(0,8);root.textContent='';
+  if(!list.length){
+    const empty=document.createElement('div');empty.className='empty-state';empty.innerHTML='<i class="fa-solid fa-sparkles"></i>'+(appData.isEEB?'Ainda não há movimentações oficiais neste período.':'Ainda não há movimentações recentes da sua turma.');root.appendChild(empty);return;
+  }
+  list.forEach((e,idx)=>{
+    const row=document.createElement('div');row.className=`activity-item ${e.type}`;row.style.animationDelay=`${idx*35}ms`;
+    const icon=document.createElement('span');icon.className='activity-icon';icon.innerHTML=`<i class="fa-solid ${e.icon}"></i>`;
+    const copy=document.createElement('div');copy.className='activity-copy';
+    const strong=document.createElement('strong');strong.textContent=e.title||'Movimentação oficial';
+    const detail=document.createElement('span');detail.textContent=e.detail||'';
+    copy.appendChild(strong);copy.appendChild(detail);
+    const time=document.createElement('span');time.className='activity-time';time.textContent=shortTimestamp(e.stamp);
+    row.appendChild(icon);row.appendChild(copy);row.appendChild(time);root.appendChild(row);
+  });
 }
+
 function decorateRankingCards(){
   document.querySelectorAll('.ranking-card').forEach(card=>{const roomEl=card.querySelector('.ranking-room');const code=roomEl?.querySelector('strong')?.textContent?.trim();if(!code)return;const id=roomIdentity(code);applyRoomTheme(card,code);if(!card.querySelector('.room-avatar')&&roomEl){const wrap=document.createElement('div');wrap.className='ranking-room-wrap';const avatar=document.createElement('span');avatar.className='room-avatar';avatar.innerHTML=`<i class="fa-solid ${id.icon}"></i>`;roomEl.parentNode.insertBefore(wrap,roomEl);wrap.appendChild(avatar);wrap.appendChild(roomEl)}});
 }
 function syncExperienceNav(tabId){
   document.querySelectorAll('.mobile-nav-item').forEach(b=>b.classList.toggle('active',b.dataset.mobileTab===tabId));
-  const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'flex':'none';const count=Number(appData.pendingReviewCount)||0;if(qs('mobilePendingBadge')){qs('mobilePendingBadge').textContent=count;qs('mobilePendingBadge').style.display=count>0?'flex':'none'}
+  const fab=qs('mobileEEBReview');if(fab)fab.style.display=appData.isEEB?'flex':'none';const count=Number(appData.pendingReviewCount)||0;if(qs('mobilePendingBadge')){qs('mobilePendingBadge').textContent=count;qs('mobilePendingBadge').style.display=appData.isEEB&&count>0?'flex':'none'}
 }
 function showExperienceSkeletons(){
   if(qs('homeRoomSummary'))qs('homeRoomSummary').innerHTML='<div class="skeleton-line wide"></div><div class="skeleton-line"></div>';
