@@ -1,13 +1,16 @@
 /**
  * ==============================================================================
  * SISTEMA: "NOSSA TURMA, NOSSO COMPROMISSO" — EE PROFESSOR HILTON ROCHA
- * REGRA DE IMPARCIALIDADE: REPRESENTANTES AVALIAM TODAS AS OUTRAS TURMAS, MENOS A SUA
- * CONTROLE PEDAGÓGICO EEB / GESTÃO ESCOLAR E BARRAS DE PROGRESSO VISUAIS
+ * Fluxo: representante envia -> EEB/Gestão analisa -> somente aprovada pontua.
  * ==============================================================================
  */
 
 var APP_TIMEZONE = 'America/Sao_Paulo';
 var FALSE_REPORT_PENALTY_POINTS = 1;
+var REPORT_STATUS_PENDING = 'PENDENTE';
+var REPORT_STATUS_APPROVED = 'APROVADA';
+var REPORT_STATUS_DENIED = 'NEGADA';
+var REPORT_STATUS_FALSE = 'FALSA';
 
 function doGet(e) {
   return HtmlService.createTemplateFromFile('Index')
@@ -23,10 +26,9 @@ function include(filename) {
 
 function getUserEmail() {
   var email = Session.getActiveUser().getEmail();
-  return email ? email.toLowerCase() : "";
+  return email ? email.toLowerCase() : '';
 }
 
-// Normaliza a turma cadastrada na aba Permissoes.
 function normalizarTurmaPermissao_(valor) {
   var turma = String(valor || '').trim();
   return /^TODAS\b/i.test(turma) ? 'TODAS' : turma;
@@ -71,7 +73,6 @@ function getPermissaoUsuario_(email) {
   return perfil;
 }
 
-// Verifica se o usuário atual é EEB ou Gestão usando a aba Permissoes como fonte de verdade.
 function checkIsEEB() {
   return getPermissaoUsuario_(getUserEmail()).isEEB;
 }
@@ -99,7 +100,36 @@ function findOccurrenceRowById_(shHist, idOcorrencia) {
   return finder ? finder.getRow() : -1;
 }
 
-// Migração mínima e segura para as funções novas. Não recria cadastros nem popula alunos.
+function findReviewRowById_(shQueue, idDenuncia) {
+  var lastRow = shQueue.getLastRow();
+  if (lastRow < 2) return -1;
+  var finder = shQueue.getRange(2, 1, lastRow - 1, 1)
+    .createTextFinder(String(idDenuncia))
+    .matchEntireCell(true)
+    .findNext();
+  return finder ? finder.getRow() : -1;
+}
+
+function ensureReviewQueue_(ss) {
+  var shQueue = ss.getSheetByName('Fila_Denuncias');
+  if (!shQueue) {
+    shQueue = ss.insertSheet('Fila_Denuncias');
+    shQueue.appendRow([
+      'ID Denúncia', 'Data/Hora Envio', 'Turma Avaliada', 'Estudante', 'Regra',
+      'E-mail Denunciante', 'Perfil / Função', 'Turma Denunciante', 'Observação',
+      'ID Requisição', 'Status', 'Data/Hora Revisão', 'EEB / Revisor',
+      'Motivo / Observação Revisão', 'ID Ocorrência Oficial'
+    ]);
+    shQueue.getRange(1, 1, 1, 15)
+      .setFontWeight('bold')
+      .setBackground('#1D4ED8')
+      .setFontColor('#FFFFFF');
+    shQueue.setFrozenRows(1);
+  }
+  return shQueue;
+}
+
+// Migração mínima e segura: preserva dados já existentes e apenas acrescenta estrutura.
 function ensureOperationalSchema_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('Planilha de referência não encontrada.');
@@ -109,13 +139,13 @@ function ensureOperationalSchema_() {
   });
 
   var shHist = ss.getSheetByName('Historico_Ocorrencias');
-  var headers = [
+  [
     { col: 10, name: 'ID Requisição' },
     { col: 11, name: 'Turma Registrador' }
-  ];
-  headers.forEach(function(h) {
+  ].forEach(function(h) {
     if (String(shHist.getRange(1, h.col).getValue() || '').trim() !== h.name) {
-      shHist.getRange(1, h.col).setValue(h.name).setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
+      shHist.getRange(1, h.col).setValue(h.name)
+        .setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
     }
   });
 
@@ -123,86 +153,63 @@ function ensureOperationalSchema_() {
   if (!shFalse) {
     shFalse = ss.insertSheet('Historico_Denuncias_Falsas');
     shFalse.appendRow([
-      'ID Revisão', 'Data/Hora Revisão', 'ID Ocorrência Original', 'Data/Hora Original',
+      'ID Revisão', 'Data/Hora Revisão', 'ID Denúncia / Ocorrência Original', 'Data/Hora Original',
       'Turma Acusada', 'Estudante', 'Regra', 'E-mail Denunciante', 'Turma Denunciante',
       'Pontos Penalidade', 'EEB / Revisor', 'Motivo'
     ]);
     shFalse.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#7F1D1D').setFontColor('#FFFFFF');
     shFalse.setFrozenRows(1);
   }
-  return { shHist: shHist, shFalse: shFalse };
+
+  var shQueue = ensureReviewQueue_(ss);
+  return { shHist: shHist, shFalse: shFalse, shQueue: shQueue };
 }
 
 function setupInitialSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // 1. Aba Historico_Ocorrencias
-  var shHist = ss.getSheetByName("Historico_Ocorrencias");
+
+  var shHist = ss.getSheetByName('Historico_Ocorrencias');
   if (!shHist) {
-    shHist = ss.insertSheet("Historico_Ocorrencias");
+    shHist = ss.insertSheet('Historico_Ocorrencias');
     shHist.appendRow([
-      "ID", "Data/Hora", "Turma Avaliada", "Estudante (1º e Último)", "Regra Descumprida", 
-      "Pontos Descontados", "E-mail Registrador", "Perfil / Função", "Observação"
+      'ID', 'Data/Hora', 'Turma Avaliada', 'Estudante (1º e Último)', 'Regra Descumprida',
+      'Pontos Descontados', 'E-mail Registrador', 'Perfil / Função', 'Observação',
+      'ID Requisição', 'Turma Registrador'
     ]);
-    shHist.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#1E293B").setFontColor("#FFFFFF");
+    shHist.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
     shHist.setFrozenRows(1);
   }
-  // Coluna técnica para idempotência. É adicionada sem alterar os dados existentes.
-  if (String(shHist.getRange(1, 10).getValue() || '').trim() !== 'ID Requisição') {
-    shHist.getRange(1, 10).setValue('ID Requisição').setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
-  }
-  if (String(shHist.getRange(1, 11).getValue() || '').trim() !== 'Turma Registrador') {
-    shHist.getRange(1, 11).setValue('Turma Registrador').setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
-  }
 
-  // 2. Aba Permissoes (E-mail, Perfil, Turma do Representante, Pode Editar?)
-  var shPerm = ss.getSheetByName("Permissoes");
+  var shPerm = ss.getSheetByName('Permissoes');
   if (!shPerm) {
-    shPerm = ss.insertSheet("Permissoes");
-    shPerm.appendRow(["E-mail Institucional", "Perfil / Função", "Turma do Aluno (Sua Sala)", "Pode Editar?"]);
-    shPerm.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#1E293B").setFontColor("#FFFFFF");
+    shPerm = ss.insertSheet('Permissoes');
+    shPerm.appendRow(['E-mail Institucional', 'Perfil / Função', 'Turma do Aluno (Sua Sala)', 'Pode Editar?']);
+    shPerm.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
     shPerm.setFrozenRows(1);
   }
 
-
-  // 3. Aba Lista_Alunos
-  var shAlunos = ss.getSheetByName("Lista_Alunos");
+  var shAlunos = ss.getSheetByName('Lista_Alunos');
   if (!shAlunos) {
-    shAlunos = ss.insertSheet("Lista_Alunos");
-    shAlunos.appendRow(["Turma", "Número", "Nome Exibição (1º e Último)", "Nome Completo"]);
-    shAlunos.getRange(1, 1, 1, 4).setFontWeight("bold").setBackground("#1E293B").setFontColor("#FFFFFF");
+    shAlunos = ss.insertSheet('Lista_Alunos');
+    shAlunos.appendRow(['Turma', 'Número', 'Nome Exibição (1º e Último)', 'Nome Completo']);
+    shAlunos.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#1E293B').setFontColor('#FFFFFF');
     shAlunos.setFrozenRows(1);
   }
 
-  // 4. Aba Historico_Bonificacoes (Reconhecimento Pedagógico e Ações Positivas da Gestão)
-  var shBonif = ss.getSheetByName("Historico_Bonificacoes");
+  var shBonif = ss.getSheetByName('Historico_Bonificacoes');
   if (!shBonif) {
-    shBonif = ss.insertSheet("Historico_Bonificacoes");
+    shBonif = ss.insertSheet('Historico_Bonificacoes');
     shBonif.appendRow([
-      "ID", "Data/Hora", "Turma Beneficiada", "Estudante / Sala", "Categoria Positiva", 
-      "Pontos Bônus", "E-mail Registrador", "Perfil / Função", "Elogio / Justificativa Pedagógica"
+      'ID', 'Data/Hora', 'Turma Beneficiada', 'Estudante / Sala', 'Categoria Positiva',
+      'Pontos Bônus', 'E-mail Registrador', 'Perfil / Função', 'Elogio / Justificativa Pedagógica'
     ]);
-    shBonif.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#B45309").setFontColor("#FFFFFF");
+    shBonif.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#B45309').setFontColor('#FFFFFF');
     shBonif.setFrozenRows(1);
   }
 
-  // 5. Auditoria de denúncias falsas e penalidade do denunciante.
-  var shFalse = ss.getSheetByName('Historico_Denuncias_Falsas');
-  if (!shFalse) {
-    shFalse = ss.insertSheet('Historico_Denuncias_Falsas');
-    shFalse.appendRow([
-      'ID Revisão', 'Data/Hora Revisão', 'ID Ocorrência Original', 'Data/Hora Original',
-      'Turma Acusada', 'Estudante', 'Regra', 'E-mail Denunciante', 'Turma Denunciante',
-      'Pontos Penalidade', 'EEB / Revisor', 'Motivo'
-    ]);
-    shFalse.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#7F1D1D').setFontColor('#FFFFFF');
-    shFalse.setFrozenRows(1);
-  }
+  ensureOperationalSchema_();
 }
 
-// Converte TODAS as células Date antes de enviar pelo google.script.run.
-// Uma data digitada em Observação também pode virar Date e impedir a resposta inteira.
-// Data/Hora recebe formato estável para os filtros mensais; demais datas preservam a exibição.
 function lerDadosWeb_(aba) {
   var range = aba.getDataRange();
   var valores = range.getValues();
@@ -210,8 +217,8 @@ function lerDadosWeb_(aba) {
   return valores.map(function(linha, i) {
     return linha.map(function(valor, j) {
       if (valor instanceof Date) {
-        return j === 1 && /^Historico_/.test(aba.getName())
-          ? Utilities.formatDate(valor, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss')
+        return j === 1 && (/^Historico_/.test(aba.getName()) || aba.getName() === 'Fila_Denuncias')
+          ? Utilities.formatDate(valor, APP_TIMEZONE, 'dd/MM/yyyy HH:mm:ss')
           : exibidos[i][j];
       }
       return valor === undefined || valor === null ? '' : valor;
