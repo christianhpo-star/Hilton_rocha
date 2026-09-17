@@ -2,13 +2,15 @@
 
 Código-fonte do WebApp em Google Apps Script usado no projeto escolar **Nossa Turma, Nosso Compromisso**.
 
-## Arquivos
+## Estrutura
 
-- `Code.gs` — backend do Apps Script: permissões, leitura da planilha, ocorrências, denúncias falsas, alunos e bonificações.
-- `Index.html` — estrutura da interface.
-- `Styles.html` — estilos da interface.
-- `Scripts.html` — lógica executada no navegador.
-- `Logo.html` — logomarca incorporada ao template.
+- `Core.gs` — autenticação, permissões, utilitários e migração segura da planilha.
+- `DataService.gs` — leitura e montagem dos dados enviados ao WebApp.
+- `Occurrences.gs` — registro, limite diário, idempotência, anulação e denúncia falsa.
+- `Management.gs` — estudantes, representantes e bonificações.
+- `Index.html` / `Styles.html` — estrutura e estilos.
+- `Nav.html` e `*View.html` — componentes visuais por módulo.
+- `ClientCore.html` — lógica do navegador; arquivos `Client*.html` ficam reservados para modularização incremental.
 
 ## Regras implementadas nesta revisão
 
@@ -26,8 +28,8 @@ Ao executar o WebApp, o código mantém os dados existentes e acrescenta apenas 
 - colunas `ID Requisição` e `Turma Registrador` em `Historico_Ocorrencias`;
 - aba `Historico_Denuncias_Falsas` para auditoria.
 
-Os dados de estudantes e usuários autorizados **não são versionados neste repositório**. Eles permanecem somente na planilha da escola.
+Os dados de estudantes e usuários autorizados **não são versionados neste repositório público**. Eles permanecem somente na planilha da escola.
 
 ## Publicação
 
-Este repositório versiona o código-fonte. Um commit no GitHub, por si só, não atualiza uma implantação já publicada no Google Apps Script. Depois de sincronizar estes arquivos com o projeto Apps Script, publique uma nova versão do WebApp conforme o fluxo adotado pela escola.
+O GitHub versiona o código-fonte, mas não altera sozinho uma implantação já publicada no Google Apps Script. Após sincronizar estes arquivos com o projeto Apps Script correspondente, é necessário publicar uma nova versão do WebApp para colocar as mudanças em produção.
